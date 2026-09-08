@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { ThermalAnomaly, IndustrialAsset } from '../types';
-import { Layers, Eye, Flame, Building2 } from 'lucide-react';
+import { Layers, Eye, Building2, Flame, MapPin, Globe } from 'lucide-react';
 
 interface MapComponentProps {
   anomalies: ThermalAnomaly[];
@@ -26,7 +27,7 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   const assetLayerRef = useRef<L.LayerGroup | null>(null);
   const baseTileLayerRef = useRef<L.TileLayer | null>(null);
 
-  const [satelliteView, setSatelliteView] = useState(false);
+  const [tileMode, setTileMode] = useState<'POSITRON' | 'SATELLITE' | 'DARK'>('POSITRON');
   const [showAssets, setShowAssets] = useState(true);
   const [showAnomalies, setShowAnomalies] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string>('ALL');
@@ -43,36 +44,70 @@ export const MapComponent: React.FC<MapComponentProps> = ({
       attributionControl: false
     });
 
-    // Dark Tile Layer
-    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Default Carto Positron Light Tiles
+    const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       maxZoom: 19,
       subdomains: 'abcd',
     }).addTo(map);
 
-    baseTileLayerRef.current = darkTiles;
-    anomalyLayerRef.current = L.layerGroup().addTo(map);
+    baseTileLayerRef.current = lightTiles;
     assetLayerRef.current = L.layerGroup().addTo(map);
+    anomalyLayerRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
 
+    // Invalidate size once container mounts and on resize
+    const timer1 = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 100);
+
+    const timer2 = setTimeout(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 400);
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+
+    if (mapContainerRef.current) {
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      resizeObserver.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // Handle Base Layer Switch (Dark vs Satellite)
+  // Handle Base Layer Switch
   useEffect(() => {
     if (!mapInstanceRef.current || !baseTileLayerRef.current) return;
     mapInstanceRef.current.removeLayer(baseTileLayerRef.current);
 
-    const newLayer = satelliteView
-      ? L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18 })
-      : L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19, subdomains: 'abcd' });
+    let newUrl = 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    let maxZoom = 19;
 
+    if (tileMode === 'SATELLITE') {
+      newUrl = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      maxZoom = 18;
+    } else if (tileMode === 'DARK') {
+      newUrl = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+      maxZoom = 19;
+    }
+
+    const newLayer = L.tileLayer(newUrl, { maxZoom, subdomains: 'abcd' });
     newLayer.addTo(mapInstanceRef.current);
     baseTileLayerRef.current = newLayer;
-  }, [satelliteView]);
+  }, [tileMode]);
 
   // Render Industrial Assets
   useEffect(() => {
@@ -88,58 +123,64 @@ export const MapComponent: React.FC<MapComponentProps> = ({
           const geom = JSON.parse(asset.boundary_geojson);
           L.geoJSON(geom, {
             style: {
-              color: '#38bdf8',
+              color: '#0284C7',
               weight: 2,
-              opacity: 0.8,
-              fillColor: '#0284c7',
-              fillOpacity: 0.15,
+              opacity: 0.85,
+              fillColor: '#38BDF8',
+              fillOpacity: 0.12,
               dashArray: '4, 4'
             }
-          }).bindTooltip(`<b>${asset.name}</b><br><span style="font-size:11px; color:#94a3b8">${asset.category} &bull; ${asset.criticality_level}</span>`, {
+          }).bindTooltip(`
+            <div style="font-family: 'DM Sans', sans-serif; padding: 2px;">
+              <strong style="color: #102A43; font-size: 12px;">${asset.name}</strong><br/>
+              <span style="color: #52677D; font-size: 11px;">${asset.category} &bull; ${asset.criticality_level}</span>
+            </div>
+          `, {
             direction: 'top',
-            className: 'bg-slate-900 border border-slate-700 text-white text-xs px-2 py-1 rounded shadow'
+            className: 'leaflet-custom-tooltip'
           }).addTo(assetLayerRef.current!);
         } catch (e) {
-          // ignore parsing error
+          // ignore
         }
       }
 
-      // 2. Asset Icon Marker
+      // 2. Asset Marker Icon
       const assetIcon = L.divIcon({
         className: 'asset-marker',
         html: `
           <div style="
-            background: #0369a1;
-            border: 2px solid #7dd3fc;
-            width: 22px;
-            height: 22px;
-            border-radius: 4px;
+            background: #0284C7;
+            border: 2px solid #FFFFFF;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
           ">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
               <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/>
               <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/>
               <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/>
             </svg>
           </div>
         `,
-        iconSize: [22, 22],
-        iconAnchor: [11, 11]
+        iconSize: [20, 20],
+        iconAnchor: [10, 10]
       });
 
       L.marker([asset.latitude, asset.longitude], { icon: assetIcon })
         .bindPopup(`
-          <div style="min-width: 200px; padding: 4px;">
-            <div style="font-weight: 800; font-size: 13px; color: #38bdf8;">${asset.name}</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">${asset.category} &bull; ${asset.criticality_level}</div>
-            <div style="font-size: 11px; border-top: 1px solid #334155; padding-top: 6px;">
+          <div style="font-family: 'DM Sans', sans-serif; min-width: 210px; padding: 4px;">
+            <div style="font-weight: 700; font-size: 13px; color: #102A43; margin-bottom: 2px;">${asset.name}</div>
+            <div style="font-size: 11px; color: #52677D; margin-bottom: 6px;">${asset.category} &bull; <span style="font-weight: 600; color: #0284C7;">${asset.criticality_level}</span></div>
+            <div style="background: #F4F7FA; border: 1px solid #D9E2EA; border-radius: 6px; padding: 6px 8px; font-size: 11px; margin-bottom: 6px; color: #102A43;">
               <div>Baseline Median: <b>${asset.baseline_frp_median} MW</b></div>
               <div>Normal Envelope: <b>${asset.baseline_frp_min} - ${asset.baseline_frp_max} MW</b></div>
               <div>Active Hotspots: <b>${asset.active_anomalies_count}</b></div>
             </div>
+            <div style="font-size: 10px; color: #6B7C8F;">Source: ${asset.source} (${asset.source_confidence})</div>
           </div>
         `)
         .addTo(assetLayerRef.current!);
@@ -153,52 +194,51 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
     if (!showAnomalies) return;
 
-    anomalies.forEach(anom => {
+    (anomalies || []).forEach(anom => {
       if (activeFilter === 'CRITICAL' && anom.risk_level !== 'CRITICAL') return;
       if (activeFilter === 'INDUSTRIAL' && !['Potential Industrial Fire', 'Routine / Persistent Industrial Thermal Source', 'Gas Flare / Combustion Source'].includes(anom.classification_class)) return;
       if (activeFilter === 'AGRICULTURAL' && anom.classification_class !== 'Agricultural / Biomass Burn') return;
 
       const isSelected = selectedAnomalyId === anom.id;
-      
-      // Color based on classification & risk
-      let color = '#f97316'; // default high orange
-      let ringColor = 'rgba(249, 115, 22, 0.4)';
+
+      let color = '#C53030'; // Soft red
+      let ringColor = 'rgba(197, 48, 48, 0.25)';
 
       if (anom.risk_level === 'CRITICAL') {
-        color = '#ef4444';
-        ringColor = 'rgba(239, 68, 68, 0.6)';
+        color = '#B91C1C';
+        ringColor = 'rgba(185, 28, 28, 0.35)';
       } else if (anom.classification_class === 'Agricultural / Biomass Burn') {
-        color = '#10b981';
-        ringColor = 'rgba(16, 185, 129, 0.4)';
+        color = '#059669';
+        ringColor = 'rgba(5, 150, 105, 0.25)';
       } else if (anom.classification_class === 'Routine / Persistent Industrial Thermal Source') {
-        color = '#06b6d4';
-        ringColor = 'rgba(6, 182, 212, 0.4)';
+        color = '#0891B2';
+        ringColor = 'rgba(8, 145, 178, 0.25)';
       } else if (anom.classification_class === 'Gas Flare / Combustion Source') {
-        color = '#a855f7';
-        ringColor = 'rgba(168, 85, 247, 0.4)';
+        color = '#7C3AED';
+        ringColor = 'rgba(124, 58, 237, 0.25)';
       } else if (anom.risk_level === 'LOW') {
-        color = '#eab308';
-        ringColor = 'rgba(234, 179, 8, 0.4)';
+        color = '#D97706';
+        ringColor = 'rgba(217, 119, 6, 0.25)';
       }
 
       const markerHtml = `
-        <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+        <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
           <div style="
             position: absolute;
             width: ${isSelected ? '32px' : '22px'};
             height: ${isSelected ? '32px' : '22px'};
             border-radius: 50%;
             background: ${ringColor};
-            animation: thermalPulse 2s infinite;
+            animation: thermalPulse 2.2s infinite;
           "></div>
           <div style="
             position: relative;
             background: ${color};
-            border: 2px solid #ffffff;
+            border: 2px solid #FFFFFF;
             width: ${isSelected ? '18px' : '14px'};
             height: ${isSelected ? '18px' : '14px'};
             border-radius: 50%;
-            box-shadow: 0 0 12px ${color};
+            box-shadow: 0 2px 8px rgba(16, 42, 67, 0.25);
           "></div>
         </div>
       `;
@@ -212,21 +252,33 @@ export const MapComponent: React.FC<MapComponentProps> = ({
 
       const marker = L.marker([anom.latitude, anom.longitude], { icon: anomalyIcon })
         .bindPopup(`
-          <div style="min-width: 220px; padding: 4px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="font-weight: 800; font-size: 13px; color: ${color};">${anom.classification_class}</span>
-              <span style="background: ${color}; color: #ffffff; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 800;">${anom.risk_level}</span>
+          <div style="font-family: 'DM Sans', sans-serif; min-width: 230px; padding: 4px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-weight: 700; font-size: 12px; color: ${color}; line-height: 1.2;">
+                ${anom.classification_class}
+              </span>
+              <span style="background: ${color}; color: #ffffff; padding: 2px 6px; border-radius: 9999px; font-size: 9px; font-weight: 700; text-transform: uppercase;">
+                ${anom.risk_level}
+              </span>
             </div>
-            <div style="font-size: 12px; font-weight: 600; color: #f8fafc; margin-bottom: 2px;">Event: ${anom.event_id}</div>
-            <div style="font-size: 11px; color: #94a3b8; margin-bottom: 6px;">Associated: ${anom.facility_name}</div>
-            <div style="background: #1e293b; padding: 6px 8px; border-radius: 4px; font-size: 11px; margin-bottom: 8px;">
-              <div>Radiative Power: <b style="color: #fb923c;">${anom.frp.toFixed(1)} MW</b></div>
-              <div>AI Confidence: <b>${(anom.classification_confidence * 100).toFixed(0)}%</b></div>
-              <div>Sensor: <b>${anom.satellite}</b></div>
+
+            <div style="font-size: 11px; font-weight: 600; color: #102A43; margin-bottom: 2px;">
+              Event ID: <span style="font-family: monospace;">${anom.event_id}</span>
             </div>
+            <div style="font-size: 11px; color: #52677D; margin-bottom: 8px;">
+              Facility Context: <b>${anom.facility_name}</b>
+            </div>
+
+            <div style="background: #F4F7FA; border: 1px solid #D9E2EA; border-radius: 6px; padding: 6px 8px; font-size: 11px; margin-bottom: 8px; color: #102A43;">
+              <div>Radiance FRP: <b style="color: ${color}; font-family: monospace;">${anom.frp.toFixed(1)} MW</b></div>
+              <div>Brightness Temp: <b style="font-family: monospace;">${anom.brightness ? (anom.brightness - 273.15).toFixed(1) + ' °C' : 'Nominal'}</b></div>
+              <div>Assessment Confidence: <b>${Math.round(anom.classification_confidence * 100)}%</b></div>
+              <div>Satellite Sensor: <b>${anom.satellite || 'VIIRS'}</b></div>
+            </div>
+
             <button
               id="btn-intel-${anom.id}"
-              style="width: 100%; background: #ea580c; color: #ffffff; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;"
+              style="width: 100%; background: #2F6FED; color: #ffffff; border: none; border-radius: 6px; padding: 6px 8px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;"
             >
               Open Incident Intelligence &rarr;
             </button>
@@ -252,48 +304,88 @@ export const MapComponent: React.FC<MapComponentProps> = ({
   }, [focusCoords]);
 
   return (
-    <div className={`relative ${className}`}>
-      <div ref={mapContainerRef} className="w-full h-full" />
+    <div 
+      className={`relative w-full h-full ${className}`}
+      style={{ minHeight: '500px', height: '100%', width: '100%' }}
+    >
+      <div 
+        ref={mapContainerRef} 
+        className="w-full h-full" 
+        style={{ minHeight: '500px', height: '100%', width: '100%' }}
+      />
 
-      {/* Floating Controls Overlay */}
-      <div className="absolute top-3 right-3 z-[400] flex flex-col gap-2 bg-[#0f172a]/95 backdrop-blur border border-slate-700/80 p-2 rounded-lg shadow-xl text-xs">
-        <div className="font-bold text-slate-300 px-1 flex items-center gap-1.5 border-b border-slate-800 pb-1">
-          <Layers className="w-3.5 h-3.5 text-orange-400" />
-          Map Layers
+      {/* Floating Layer Controls (Editorial Frosted Glass) */}
+      <div className="absolute top-3 right-3 z-[400] flex flex-col gap-2 bg-white/85 backdrop-blur-md border border-white/90 p-3 rounded-xl shadow-[0_4px_20px_-2px_rgba(16,42,67,0.08)] text-xs text-[#102A43] max-w-[200px]">
+        <div className="font-bold text-[#102A43] pb-1.5 border-b border-[#D9E2EA] flex items-center justify-between">
+          <span className="flex items-center gap-1.5">
+            <Layers className="w-3.5 h-3.5 text-[#2F6FED]" />
+            GIS Layers
+          </span>
         </div>
 
-        <label className="flex items-center gap-2 px-1 text-slate-300 hover:text-white cursor-pointer">
-          <input
-            type="checkbox"
-            checked={satelliteView}
-            onChange={(e) => setSatelliteView(e.target.checked)}
-            className="rounded border-slate-700 text-orange-500 focus:ring-0"
-          />
-          <span>Satellite Context</span>
-        </label>
+        {/* Tile Basemap Switcher */}
+        <div className="space-y-1 pt-1">
+          <div className="text-[10px] uppercase font-bold text-[#6B7C8F]">Basemap</div>
+          <div className="grid grid-cols-3 gap-1">
+            <button
+              onClick={() => setTileMode('POSITRON')}
+              className={`px-1.5 py-1 rounded text-[10px] font-medium transition ${
+                tileMode === 'POSITRON'
+                  ? 'bg-[#2F6FED] text-white'
+                  : 'bg-[#EEF3F7] text-[#52677D] hover:bg-[#E2E8F0]'
+              }`}
+            >
+              Light
+            </button>
+            <button
+              onClick={() => setTileMode('SATELLITE')}
+              className={`px-1.5 py-1 rounded text-[10px] font-medium transition ${
+                tileMode === 'SATELLITE'
+                  ? 'bg-[#2F6FED] text-white'
+                  : 'bg-[#EEF3F7] text-[#52677D] hover:bg-[#E2E8F0]'
+              }`}
+            >
+              Sat
+            </button>
+            <button
+              onClick={() => setTileMode('DARK')}
+              className={`px-1.5 py-1 rounded text-[10px] font-medium transition ${
+                tileMode === 'DARK'
+                  ? 'bg-[#2F6FED] text-white'
+                  : 'bg-[#EEF3F7] text-[#52677D] hover:bg-[#E2E8F0]'
+              }`}
+            >
+              Dark
+            </button>
+          </div>
+        </div>
 
-        <label className="flex items-center gap-2 px-1 text-slate-300 hover:text-white cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showAssets}
-            onChange={(e) => setShowAssets(e.target.checked)}
-            className="rounded border-slate-700 text-cyan-500 focus:ring-0"
-          />
-          <span>Industrial Assets</span>
-        </label>
+        {/* Layer Toggles */}
+        <div className="space-y-1.5 pt-1.5 border-t border-[#D9E2EA]">
+          <label className="flex items-center gap-2 text-[#52677D] hover:text-[#102A43] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showAnomalies}
+              onChange={(e) => setShowAnomalies(e.target.checked)}
+              className="rounded border-[#D9E2EA] text-[#2F6FED] focus:ring-0"
+            />
+            <span className="font-medium">Thermal Hotspots</span>
+          </label>
 
-        <label className="flex items-center gap-2 px-1 text-slate-300 hover:text-white cursor-pointer">
-          <input
-            type="checkbox"
-            checked={showAnomalies}
-            onChange={(e) => setShowAnomalies(e.target.checked)}
-            className="rounded border-slate-700 text-orange-500 focus:ring-0"
-          />
-          <span>Thermal Anomalies</span>
-        </label>
+          <label className="flex items-center gap-2 text-[#52677D] hover:text-[#102A43] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showAssets}
+              onChange={(e) => setShowAssets(e.target.checked)}
+              className="rounded border-[#D9E2EA] text-[#0284C7] focus:ring-0"
+            />
+            <span className="font-medium">Industrial Assets</span>
+          </label>
+        </div>
 
-        <div className="border-t border-slate-800 pt-1.5 mt-0.5">
-          <div className="text-[10px] uppercase font-bold text-slate-400 px-1 mb-1">Filter View</div>
+        {/* Quick Filter */}
+        <div className="pt-1.5 border-t border-[#D9E2EA]">
+          <div className="text-[10px] uppercase font-bold text-[#6B7C8F] mb-1">Filter View</div>
           <div className="grid grid-cols-2 gap-1">
             {['ALL', 'CRITICAL', 'INDUSTRIAL', 'AGRICULTURAL'].map((f) => (
               <button
@@ -301,8 +393,8 @@ export const MapComponent: React.FC<MapComponentProps> = ({
                 onClick={() => setActiveFilter(f)}
                 className={`px-1.5 py-0.5 rounded text-[10px] font-semibold transition ${
                   activeFilter === f
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
+                    ? 'bg-[#2F6FED] text-white'
+                    : 'bg-[#EEF3F7] text-[#52677D] hover:bg-[#E2E8F0]'
                 }`}
               >
                 {f}
@@ -312,27 +404,27 @@ export const MapComponent: React.FC<MapComponentProps> = ({
         </div>
       </div>
 
-      {/* Map Legend */}
-      <div className="absolute bottom-4 left-4 z-[400] bg-[#0f172a]/95 backdrop-blur border border-slate-800 p-2.5 rounded-lg shadow-xl text-[11px] flex items-center gap-4">
+      {/* Map Legend (Bottom-Left Frosted Pill) */}
+      <div className="absolute bottom-4 left-4 z-[400] bg-white/85 backdrop-blur-md border border-white/90 px-3 py-2 rounded-xl shadow-[0_4px_16px_rgba(16,42,67,0.06)] text-[11px] text-[#102A43] flex flex-wrap items-center gap-3.5">
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-          <span className="text-slate-300">Industrial Fire</span>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#B91C1C]" />
+          <span className="text-[#52677D] font-medium">Potential Fire</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-          <span className="text-slate-300">Gas Flare</span>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#7C3AED]" />
+          <span className="text-[#52677D] font-medium">Gas Flare</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400" />
-          <span className="text-slate-300">Persistent / Mining</span>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0891B2]" />
+          <span className="text-[#52677D] font-medium">Persistent Source</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-          <span className="text-slate-300">Agricultural</span>
+          <span className="w-2.5 h-2.5 rounded-full bg-[#059669]" />
+          <span className="text-[#52677D] font-medium">Agricultural</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded bg-sky-600 border border-sky-400" />
-          <span className="text-slate-300">Industrial Asset</span>
+          <span className="w-2.5 h-2.5 rounded bg-[#0284C7] border border-white" />
+          <span className="text-[#52677D] font-medium">Industrial Facility</span>
         </div>
       </div>
     </div>

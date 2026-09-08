@@ -7,6 +7,7 @@ import { api } from './services/api';
 import { Navbar } from './components/Navbar';
 import { ScenarioBar } from './components/ScenarioBar';
 import { DossierModal } from './components/DossierModal';
+import { GlobalBackground } from './components/layout/GlobalBackground';
 
 // Pages
 import { CommandCenter } from './pages/CommandCenter';
@@ -151,7 +152,10 @@ export const App: React.FC = () => {
   const criticalAlertsCount = alerts.filter(a => a.severity === 'CRITICAL' && a.status !== 'RESOLVED').length;
 
   return (
-    <div className="min-h-screen bg-[#080d1a] text-slate-100 flex flex-col font-sans selection:bg-orange-600 selection:text-white">
+    <div className="min-h-screen relative flex flex-col font-sans selection:bg-[#2F6FED]/20 selection:text-[#102A43] bg-[#F4F7FA]">
+      {/* Global Shared Page Background & Atmospheric Overlay */}
+      <GlobalBackground activeTab={activeTab} />
+
       {/* Top Navbar */}
       <Navbar
         activeTab={activeTab}
@@ -166,16 +170,18 @@ export const App: React.FC = () => {
         criticalAlertsCount={criticalAlertsCount}
       />
 
-      {/* Demo Scenario Controller Bar */}
-      <ScenarioBar
-        onTriggerScenario={handleTriggerScenario}
-        onResetScenario={handleResetScenario}
-        activeScenarioText={scenarioText}
-        loading={loadingScenario}
-      />
+      {/* Demo Scenario Controller Bar (Removed from home page) */}
+      {activeTab !== 'command' && (
+        <ScenarioBar
+          onTriggerScenario={handleTriggerScenario}
+          onResetScenario={handleResetScenario}
+          activeScenarioText={scenarioText}
+          loading={loadingScenario}
+        />
+      )}
 
       {/* Main Screen Body */}
-      <main className="flex-1 overflow-x-hidden">
+      <main className="relative z-10 flex-1 overflow-x-hidden">
         {activeTab === 'command' && (
           <CommandCenter
             anomalies={anomalies}
@@ -185,6 +191,7 @@ export const App: React.FC = () => {
             onSelectAnomaly={handleSelectAnomaly}
             onSelectAsset={handleSelectAsset}
             onViewAlerts={() => setActiveTab('alerts')}
+            onViewHealth={() => setActiveTab('health')}
           />
         )}
 
