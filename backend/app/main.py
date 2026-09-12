@@ -14,6 +14,7 @@ from app.services.features import extract_features
 from app.services.classification import classifier
 from app.services.persistence import evaluate_persistence_and_baseline
 from app.services.risk import calculate_risk
+from app.services.alerts_engine import evaluate_alert_decision
 
 # API Routers
 from app.api.anomalies import router as anomalies_router
@@ -108,23 +109,28 @@ def init_db_and_seed():
                 )
                 db.add(risk_db)
 
-                # Store alert if risk is elevated
-                if risk_res["risk_level"] in ["CRITICAL", "HIGH", "MEDIUM"]:
-                    sev = risk_res["risk_level"]
-                    title = f"Thermal Anomaly Detected: {clf_res['predicted_class']}"
-                    msg = f"FRP {anomaly.frp:.1f} MW observed near {features['nearest_asset_name']} ({features['distance_to_nearest_asset_m']:.0f} m)."
+                # Store alert via context-aware decision engine
+                existing_alerts = db.query(Alert).all()
+                decision = evaluate_alert_decision(anomaly, features, clf_res, risk_res, existing_alerts)
+                
+                if decision["action"] == "CREATE_NEW":
                     alert_db = Alert(
                         alert_id=f"ALT-{anomaly.id:04d}",
                         anomaly_id=anomaly.id,
-                        severity=sev,
-                        title=title,
-                        message=msg,
-                        facility_name=features["nearest_asset_name"],
+                        severity=decision["severity"],
+                        title=decision["title"],
+                        message=decision["message"],
+                        facility_name=decision["facility_name"],
                         status="NEW"
                     )
                     db.add(alert_db)
+                elif decision["action"] == "CONSOLIDATE" and decision.get("target_alert_id"):
+                    target_alert = db.query(Alert).filter(Alert.id == decision["target_alert_id"]).first()
+                    if target_alert:
+                        target_alert.severity = decision["severity"]
+                        target_alert.message = decision["updated_message"]
 
-                # Store investigation record
+                # Store investigation record with evidence-linked recommendation
                 inv_db = Investigation(
                     anomaly_id=anomaly.id,
                     status="NEW",
@@ -137,7 +143,7 @@ def init_db_and_seed():
                             "text": f"Telemetry ingested from {anomaly.satellite}. Initial evidence fusion completed."
                         }
                     ]),
-                    recommendation="Review spatial proximity, temporal recurrence, and baseline divergence."
+                    recommendation=decision["investigation_recommendation"]
                 )
                 db.add(inv_db)
 

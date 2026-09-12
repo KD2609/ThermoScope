@@ -16,9 +16,12 @@ def evaluate_persistence_and_baseline(
     current_frp = float(anomaly.frp)
     ts = anomaly.timestamp or datetime.utcnow()
 
-    # Filter observations in local cluster radius
+    # Filter observations in local cluster radius (strictly leak-free: obs.timestamp <= ts)
     cluster_obs = []
     for obs in historical_observations:
+        obs_ts = getattr(obs, "timestamp", None)
+        if obs_ts and obs_ts > ts:
+            continue
         dist = haversine_distance_meters(lat, lon, obs.latitude, obs.longitude)
         if dist <= cluster_radius_m:
             cluster_obs.append(obs)

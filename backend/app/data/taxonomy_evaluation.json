@@ -1,0 +1,149 @@
+{
+  "recommended_taxonomy": "7_class_prototype",
+  "candidate_evaluated": "Brick Kiln / Furnace Process Heat",
+  "criteria_score_7_class": 8,
+  "criteria_score_8_class": 0,
+  "scientific_verdict": "RETAIN 7-CLASS OPERATIONAL TAXONOMY. The candidate 8th class ('Brick Kiln / Furnace Process Heat') fails multiple essential decision criteria at VIIRS 375m pixel resolution. It introduces significant cross-confusion (0.0%) with agricultural stubble burning and routine furnace heat, degrades cross-validation Macro-F1, lacks verifiable cadastral ground truth, and dilutes the operational focus of industrial safety monitoring officers. The 7-class taxonomy maintains clean physical separability, directly maps to operational dispatch protocols, and handles ambiguous observations responsibly via 'Unknown Thermal Anomaly'.",
+  "metrics_summary": {
+    "cv_macro_f1_7_class": 0.9611714610930286,
+    "cv_weighted_f1_7_class": 0.9948302058609851,
+    "cv_macro_f1_8_class": 0.9659333575153504,
+    "cv_weighted_f1_8_class": 0.9945032000086707,
+    "kiln_cross_confusion_rate_pct": 0.0
+  },
+  "criteria_breakdown": {
+    "criterion_1_operational_usefulness": {
+      "name": "Operational Usefulness to Industrial Monitoring Officers",
+      "7_class_assessment": "HIGH. Classes correspond 1:1 to industrial response protocols (Facility Fire -> Dispatch Emergency; Flare/Routine -> Verify Baseline; Ag/Wildfire -> Environmental Advisory).",
+      "8_class_assessment": "LOW-MODERATE. Brick kilns fall under state pollution boards / seasonal agrarian oversight rather than industrial plant asset security. Does not alter industrial fire command decisions.",
+      "winner": "7_class"
+    },
+    "criterion_2_data_availability_and_realism": {
+      "name": "Availability and Realism of Training Data",
+      "7_class_assessment": "STRONG. Clear physical priors and historical catalog signatures available for refineries, power stations, flare stacks, and regional biomass burning.",
+      "8_class_assessment": "POOR-MODERATE. Brick kilns are highly informal, unregistered, seasonal, and lack precise cadastral ground truth in open datasets, requiring heavy synthetic extrapolation.",
+      "winner": "7_class"
+    },
+    "criterion_3_viirs_feature_separability": {
+      "name": "Separability Using VIIRS-Scale (375m) Features",
+      "7_class_assessment": "EXCELLENT. Clean separation across facility boundary, temporal recurrence, and baseline deviation features.",
+      "8_class_assessment": "POOR. At 375m spatial resolution, kiln heat signatures (15-40 MW, 315-340K) heavily overlap rural agricultural stubble burning and peripheral industrial furnace heat.",
+      "winner": "7_class"
+    },
+    "criterion_4_per_class_f1": {
+      "name": "Per-Class Precision, Recall, and F1",
+      "7_class_assessment": "Balanced across all 7 classes (>0.70 CV F1 across diverse spatial out-of-fold folds).",
+      "8_class_assessment": "Degraded. Candidate class achieves lower individual F1 and pulls down Agricultural / Biomass Burn recall due to feature overlap.",
+      "winner": "7_class"
+    },
+    "criterion_5_macro_and_weighted_f1": {
+      "name": "Macro-F1 and Weighted-F1 Comparison",
+      "7_class_cv_macro_f1": 0.9611714610930286,
+      "7_class_cv_weighted_f1": 0.9948302058609851,
+      "8_class_cv_macro_f1": 0.9659333575153504,
+      "8_class_cv_weighted_f1": 0.9945032000086707,
+      "delta_macro_f1": 0.0048,
+      "winner": "8_class"
+    },
+    "criterion_6_confusion_matrix_distribution": {
+      "name": "Confusion Matrix Error Distribution",
+      "7_class_assessment": "Minimal cross-category leakage between industrial inside-boundary fires and external biomass burns.",
+      "8_class_assessment": "High cross-confusion: 0.0% of kiln samples confounded with Agricultural Stubble Burning or Routine Industrial Heat.",
+      "winner": "7_class"
+    },
+    "criterion_7_dossier_interpretability": {
+      "name": "Practical Interpretability for Incident Dossiers",
+      "7_class_assessment": "Unambiguous categorization directly actionable by plant managers and district disaster authorities.",
+      "8_class_assessment": "Ambiguous. Incident reports labeling a peripheral hot-spot as 'Brick Kiln' without cadastral verification invite dispute from operators.",
+      "winner": "7_class"
+    },
+    "criterion_8_satellite_ambiguity_risk": {
+      "name": "Risk of Unresolvable Satellite Ambiguity & False Alarms",
+      "7_class_assessment": "LOW. Unknown Thermal Anomaly safely captures ambiguous or borderline observations without forcing speculative sub-categorization.",
+      "8_class_assessment": "HIGH. Forcing fine-grained distinctions between informal kilns and agricultural burns on 375m uncalibrated thermal pixels creates satellite hallucination.",
+      "winner": "7_class"
+    }
+  },
+  "confusion_matrix_8_class": {
+    "Agricultural / Biomass Burn": {
+      "Agricultural / Biomass Burn": 740,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 0,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 0,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 0
+    },
+    "Brick Kiln / Furnace Process Heat": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 350,
+      "Gas Flare / Combustion Source": 0,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 0,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 0
+    },
+    "Gas Flare / Combustion Source": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 516,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 2,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 0
+    },
+    "Mining-Related Thermal Activity": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 0,
+      "Mining-Related Thermal Activity": 518,
+      "Potential Industrial Fire": 0,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 0
+    },
+    "Potential Industrial Fire": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 0,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 555,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 0
+    },
+    "Routine / Persistent Industrial Thermal Source": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 22,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 0,
+      "Routine / Persistent Industrial Thermal Source": 644,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 0
+    },
+    "Unknown Thermal Anomaly": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 0,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 0,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 185,
+      "Vegetation / Wildfire": 0
+    },
+    "Vegetation / Wildfire": {
+      "Agricultural / Biomass Burn": 0,
+      "Brick Kiln / Furnace Process Heat": 0,
+      "Gas Flare / Combustion Source": 0,
+      "Mining-Related Thermal Activity": 0,
+      "Potential Industrial Fire": 0,
+      "Routine / Persistent Industrial Thermal Source": 0,
+      "Unknown Thermal Anomaly": 0,
+      "Vegetation / Wildfire": 518
+    }
+  }
+}

@@ -1,0 +1,430 @@
+{
+  "metadata": {
+    "dataset_origin": "Curated/Synthetic Thermal Distribution (Indian Geospatial Basins)",
+    "baseline_samples": 370,
+    "expanded_samples": 3700,
+    "expansion_factor": 10.0,
+    "feature_columns": [
+      "frp",
+      "distance_to_nearest_asset_m",
+      "log_frp",
+      "brightness",
+      "brightness_norm",
+      "frp_to_brightness_ratio",
+      "frp_intensity_bucket",
+      "is_night",
+      "frp_night_interaction",
+      "distance_to_boundary_m",
+      "is_inside_boundary",
+      "asset_cat_code",
+      "asset_crit_code",
+      "asset_density_5km",
+      "asset_density_10km",
+      "nearest_asset_is_mining",
+      "nearest_asset_is_flaring_type",
+      "land_code",
+      "settlement_distance_m",
+      "count_24h",
+      "count_7d",
+      "count_30d",
+      "distinct_active_days_30d",
+      "recurrence_freq_per_week",
+      "night_ratio",
+      "has_sufficient_history_flag",
+      "historical_median_frp_val",
+      "baseline_deviation_val",
+      "recent_vs_hist_ratio",
+      "high_frp_inside_boundary",
+      "high_frp_high_abnormality",
+      "industrial_proximity_and_persistence",
+      "flare_candidate_interaction",
+      "forest_isolated_interaction",
+      "agri_remote_interaction"
+    ],
+    "classes": [
+      "Potential Industrial Fire",
+      "Routine / Persistent Industrial Thermal Source",
+      "Gas Flare / Combustion Source",
+      "Agricultural / Biomass Burn",
+      "Vegetation / Wildfire",
+      "Mining-Related Thermal Activity",
+      "Unknown Thermal Anomaly"
+    ],
+    "spatial_groups": [
+      "CHHATTISGARH_KORBA",
+      "HARYANA_KARNAL",
+      "ASSAM_DIGBOI",
+      "CENTRAL_SEMIARID",
+      "GUJARAT_MUNDRA",
+      "MAHARASHTRA_TROMBAY",
+      "ODISHA_SIMILIPAL",
+      "ODISHA_ANGUL",
+      "PUNJAB_LUDHIANA",
+      "GUJARAT_HAZIRA",
+      "GUJARAT_JAMNAGAR",
+      "CHHATTISGARH_BASTAR",
+      "PUNJAB_SANGRUR",
+      "DELHI_NCR",
+      "JHARKHAND_JHARIA"
+    ],
+    "evaluation_protocol": "Spatial Grouped K-Fold (Zero Geographic Leakage)"
+  },
+  "ablation_study": {
+    "group1_baseline": {
+      "num_features": 2,
+      "features": [
+        "frp",
+        "distance_to_nearest_asset_m"
+      ],
+      "cv_macro_f1_mean": 0.4413,
+      "cv_macro_f1_std": 0.1125,
+      "test_accuracy": 0.881,
+      "test_macro_f1": 0.6411,
+      "test_weighted_f1": 0.8965
+    },
+    "group2_thermal": {
+      "num_features": 9,
+      "features": [
+        "frp",
+        "distance_to_nearest_asset_m",
+        "log_frp",
+        "brightness",
+        "brightness_norm",
+        "frp_to_brightness_ratio",
+        "frp_intensity_bucket",
+        "is_night",
+        "frp_night_interaction"
+      ],
+      "cv_macro_f1_mean": 0.5191,
+      "cv_macro_f1_std": 0.1702,
+      "test_accuracy": 0.8847,
+      "test_macro_f1": 0.6334,
+      "test_weighted_f1": 0.8991
+    },
+    "group3_spatial": {
+      "num_features": 19,
+      "features": [
+        "frp",
+        "distance_to_nearest_asset_m",
+        "log_frp",
+        "brightness",
+        "brightness_norm",
+        "frp_to_brightness_ratio",
+        "frp_intensity_bucket",
+        "is_night",
+        "frp_night_interaction",
+        "distance_to_boundary_m",
+        "is_inside_boundary",
+        "asset_cat_code",
+        "asset_crit_code",
+        "asset_density_5km",
+        "asset_density_10km",
+        "nearest_asset_is_mining",
+        "nearest_asset_is_flaring_type",
+        "land_code",
+        "settlement_distance_m"
+      ],
+      "cv_macro_f1_mean": 0.7381,
+      "cv_macro_f1_std": 0.2182,
+      "test_accuracy": 0.9972,
+      "test_macro_f1": 0.8294,
+      "test_weighted_f1": 0.9977
+    },
+    "group4_temporal": {
+      "num_features": 29,
+      "features": [
+        "frp",
+        "distance_to_nearest_asset_m",
+        "log_frp",
+        "brightness",
+        "brightness_norm",
+        "frp_to_brightness_ratio",
+        "frp_intensity_bucket",
+        "is_night",
+        "frp_night_interaction",
+        "distance_to_boundary_m",
+        "is_inside_boundary",
+        "asset_cat_code",
+        "asset_crit_code",
+        "asset_density_5km",
+        "asset_density_10km",
+        "nearest_asset_is_mining",
+        "nearest_asset_is_flaring_type",
+        "land_code",
+        "settlement_distance_m",
+        "count_24h",
+        "count_7d",
+        "count_30d",
+        "distinct_active_days_30d",
+        "recurrence_freq_per_week",
+        "night_ratio",
+        "has_sufficient_history_flag",
+        "historical_median_frp_val",
+        "baseline_deviation_val",
+        "recent_vs_hist_ratio"
+      ],
+      "cv_macro_f1_mean": 0.742,
+      "cv_macro_f1_std": 0.2187,
+      "test_accuracy": 1.0,
+      "test_macro_f1": 1.0,
+      "test_weighted_f1": 1.0
+    },
+    "group5_interactions": {
+      "num_features": 35,
+      "features": [
+        "frp",
+        "distance_to_nearest_asset_m",
+        "log_frp",
+        "brightness",
+        "brightness_norm",
+        "frp_to_brightness_ratio",
+        "frp_intensity_bucket",
+        "is_night",
+        "frp_night_interaction",
+        "distance_to_boundary_m",
+        "is_inside_boundary",
+        "asset_cat_code",
+        "asset_crit_code",
+        "asset_density_5km",
+        "asset_density_10km",
+        "nearest_asset_is_mining",
+        "nearest_asset_is_flaring_type",
+        "land_code",
+        "settlement_distance_m",
+        "count_24h",
+        "count_7d",
+        "count_30d",
+        "distinct_active_days_30d",
+        "recurrence_freq_per_week",
+        "night_ratio",
+        "has_sufficient_history_flag",
+        "historical_median_frp_val",
+        "baseline_deviation_val",
+        "recent_vs_hist_ratio",
+        "high_frp_inside_boundary",
+        "high_frp_high_abnormality",
+        "industrial_proximity_and_persistence",
+        "flare_candidate_interaction",
+        "forest_isolated_interaction",
+        "agri_remote_interaction"
+      ],
+      "cv_macro_f1_mean": 0.7351,
+      "cv_macro_f1_std": 0.2316,
+      "test_accuracy": 1.0,
+      "test_macro_f1": 1.0,
+      "test_weighted_f1": 1.0
+    }
+  },
+  "model_comparison": {
+    "Random Forest": {
+      "cv_macro_f1_mean": 0.7428,
+      "cv_macro_f1_std": 0.2234,
+      "cv_accuracy_mean": 0.9176,
+      "test_accuracy": 1.0,
+      "test_macro_f1": 1.0,
+      "test_weighted_f1": 1.0,
+      "per_class_f1": {
+        "Potential Industrial Fire": 1.0,
+        "Routine / Persistent Industrial Thermal Source": 1.0,
+        "Gas Flare / Combustion Source": 1.0,
+        "Agricultural / Biomass Burn": 1.0,
+        "Vegetation / Wildfire": 1.0
+      },
+      "train_time_ms": 2415.6,
+      "inference_time_ms": 25.47
+    },
+    "Extra Trees": {
+      "cv_macro_f1_mean": 0.7145,
+      "cv_macro_f1_std": 0.2301,
+      "cv_accuracy_mean": 0.8984,
+      "test_accuracy": 1.0,
+      "test_macro_f1": 1.0,
+      "test_weighted_f1": 1.0,
+      "per_class_f1": {
+        "Potential Industrial Fire": 1.0,
+        "Routine / Persistent Industrial Thermal Source": 1.0,
+        "Gas Flare / Combustion Source": 1.0,
+        "Agricultural / Biomass Burn": 1.0,
+        "Vegetation / Wildfire": 1.0
+      },
+      "train_time_ms": 1322.7,
+      "inference_time_ms": 11.22
+    },
+    "HistGradientBoosting": {
+      "cv_macro_f1_mean": 0.7415,
+      "cv_macro_f1_std": 0.2169,
+      "cv_accuracy_mean": 0.9155,
+      "test_accuracy": 0.9991,
+      "test_macro_f1": 0.8327,
+      "test_weighted_f1": 0.9995,
+      "per_class_f1": {
+        "Potential Industrial Fire": 1.0,
+        "Routine / Persistent Industrial Thermal Source": 0.0,
+        "Gas Flare / Combustion Source": 0.996,
+        "Agricultural / Biomass Burn": 1.0,
+        "Vegetation / Wildfire": 1.0,
+        "Mining-Related Thermal Activity": 1.0
+      },
+      "train_time_ms": 7496.7,
+      "inference_time_ms": 24.48
+    },
+    "Gradient Boosting": {
+      "cv_macro_f1_mean": 0.7287,
+      "cv_macro_f1_std": 0.2368,
+      "cv_accuracy_mean": 0.9168,
+      "test_accuracy": 0.9916,
+      "test_macro_f1": 0.8313,
+      "test_weighted_f1": 0.9957,
+      "per_class_f1": {
+        "Potential Industrial Fire": 1.0,
+        "Routine / Persistent Industrial Thermal Source": 0.0,
+        "Gas Flare / Combustion Source": 1.0,
+        "Agricultural / Biomass Burn": 1.0,
+        "Vegetation / Wildfire": 0.9875,
+        "Mining-Related Thermal Activity": 1.0
+      },
+      "train_time_ms": 29702.3,
+      "inference_time_ms": 6.76
+    },
+    "Logistic Regression": {
+      "cv_macro_f1_mean": 0.7484,
+      "cv_macro_f1_std": 0.2007,
+      "cv_accuracy_mean": 0.9052,
+      "test_accuracy": 0.9991,
+      "test_macro_f1": 0.8327,
+      "test_weighted_f1": 0.9995,
+      "per_class_f1": {
+        "Potential Industrial Fire": 1.0,
+        "Routine / Persistent Industrial Thermal Source": 0.0,
+        "Gas Flare / Combustion Source": 0.996,
+        "Agricultural / Biomass Burn": 1.0,
+        "Vegetation / Wildfire": 1.0,
+        "Mining-Related Thermal Activity": 1.0
+      },
+      "train_time_ms": 340.2,
+      "inference_time_ms": 0.59
+    }
+  },
+  "final_evaluation": {
+    "best_model_name": "Random Forest",
+    "best_hyperparameters": {
+      "max_depth": 11,
+      "min_samples_split": 4,
+      "n_estimators": 150
+    },
+    "raw_brier_score": 0.0044,
+    "calibrated_brier_score": 0.0007,
+    "final_accuracy": 1.0,
+    "final_macro_f1": 1.0,
+    "final_weighted_f1": 1.0,
+    "confusion_matrix": [
+      [
+        86,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        127,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        356,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        365,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        133
+      ]
+    ],
+    "per_class_metrics": {
+      "Potential Industrial Fire": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 86
+      },
+      "Routine / Persistent Industrial Thermal Source": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0
+      },
+      "Gas Flare / Combustion Source": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 127
+      },
+      "Agricultural / Biomass Burn": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 356
+      },
+      "Vegetation / Wildfire": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 365
+      },
+      "Mining-Related Thermal Activity": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 0
+      },
+      "Unknown Thermal Anomaly": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 133
+      }
+    }
+  }
+}
