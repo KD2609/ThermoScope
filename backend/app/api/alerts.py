@@ -1,88 +1,81 @@
-from datetime import datetime
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+"""API endpoints for Alert Management and Operations.
+"""
+
+from datetime import datetime, timezone
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.models.models import Alert, AuditLog
-from app.schemas.schemas import AlertResponse, AlertActionRequest
+from sqlalchemy import desc
+
+from backend.app.database import get_db
+from backend.app.models.models import Alert
+from backend.app.schemas.schemas import AlertSchema, AlertAcknowledgeRequest, AlertResolveRequest
 
 router = APIRouter(prefix="/api/alerts", tags=["Alerts"])
 
-@router.get("", response_model=list[AlertResponse])
+
+@router.get("", response_model=List[AlertSchema])
 def list_alerts(
-    severity: Optional[str] = None,
-    status: Optional[str] = None,
+    status: Optional[str] = Query(None, description="NEW, ACKNOWLEDGED, RESOLVED"),
+    severity: Optional[str] = Query(None, description="CRITICAL, HIGH, MEDIUM, LOW"),
+    limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Alert).order_by(Alert.created_at.desc())
-    if severity:
-        query = query.filter(Alert.severity == severity.upper())
+    """List operational alerts filtered by status and severity."""
+    query = db.query(Alert)
+
     if status:
         query = query.filter(Alert.status == status.upper())
-    return query.all()
 
-@router.post("/{id}/acknowledge")
-def acknowledge_alert(id: int, req: AlertActionRequest, db: Session = Depends(get_db)):
+    if severity:
+        query = query.filter(Alert.severity == severity.upper())
+
+    alerts = query.order_by(desc(Alert.created_at)).limit(limit).all()
+    return [a.to_dict() for a in alerts]
+
+
+@router.get("/{id}", response_model=AlertSchema)
+def get_alert_by_id(id: str, db: Session = Depends(get_db)):
+    """Retrieve detailed information for a single alert."""
     alert = db.query(Alert).filter(Alert.id == id).first()
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert ID {id} not found.")
+        raise HTTPException(status_code=404, detail=f"Alert '{id}' not found.")
+    return alert.to_dict()
+
+
+@router.post("/{id}/acknowledge", response_model=AlertSchema)
+def acknowledge_alert(
+    id: str,
+    payload: AlertAcknowledgeRequest,
+    db: Session = Depends(get_db)
+):
+    """Mark an alert as ACKNOWLEDGED by an authorized user."""
+    alert = db.query(Alert).filter(Alert.id == id).first()
+    if not alert:
+        raise HTTPException(status_code=404, detail=f"Alert '{id}' not found.")
 
     alert.status = "ACKNOWLEDGED"
-    alert.updated_at = datetime.utcnow()
-
-    # Log action
-    log = AuditLog(
-        action="ALERT_ACKNOWLEDGED",
-        entity_type="ALERT",
-        entity_id=alert.alert_id,
-        user_name=req.user_name,
-        details=f"Alert {alert.alert_id} acknowledged by {req.user_name}."
-    )
-    db.add(log)
+    alert.acknowledged_by = payload.user_name
+    alert.acknowledged_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(alert)
-    return {"status": "SUCCESS", "message": f"Alert {alert.alert_id} acknowledged.", "alert": alert}
+    return alert.to_dict()
 
-@router.post("/{id}/assign")
-def assign_alert(id: int, req: AlertActionRequest, db: Session = Depends(get_db)):
+
+@router.post("/{id}/resolve", response_model=AlertSchema)
+def resolve_alert(
+    id: str,
+    payload: AlertResolveRequest,
+    db: Session = Depends(get_db)
+):
+    """Mark an alert as RESOLVED with operational resolution notes."""
     alert = db.query(Alert).filter(Alert.id == id).first()
     if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert ID {id} not found.")
-
-    assigned_to = req.assigned_to or "Emergency Dispatch Officer"
-    alert.assigned_to = assigned_to
-    alert.status = "UNDER_REVIEW"
-    alert.updated_at = datetime.utcnow()
-
-    log = AuditLog(
-        action="ASSIGNMENT_CHANGED",
-        entity_type="ALERT",
-        entity_id=alert.alert_id,
-        user_name=req.user_name,
-        details=f"Alert assigned to {assigned_to}."
-    )
-    db.add(log)
-    db.commit()
-    db.refresh(alert)
-    return {"status": "SUCCESS", "message": f"Alert assigned to {assigned_to}.", "alert": alert}
-
-@router.post("/{id}/resolve")
-def resolve_alert(id: int, req: AlertActionRequest, db: Session = Depends(get_db)):
-    alert = db.query(Alert).filter(Alert.id == id).first()
-    if not alert:
-        raise HTTPException(status_code=404, detail=f"Alert ID {id} not found.")
+        raise HTTPException(status_code=404, detail=f"Alert '{id}' not found.")
 
     alert.status = "RESOLVED"
-    alert.updated_at = datetime.utcnow()
-
-    log = AuditLog(
-        action="STATUS_CHANGED",
-        entity_type="ALERT",
-        entity_id=alert.alert_id,
-        user_name=req.user_name,
-        details=f"Alert resolved by {req.user_name}."
-    )
-    db.add(log)
+    alert.resolved_at = datetime.now(timezone.utc)
+    alert.resolution_notes = payload.notes
     db.commit()
     db.refresh(alert)
-    return {"status": "SUCCESS", "message": f"Alert {alert.alert_id} resolved.", "alert": alert}
+    return alert.to_dict()

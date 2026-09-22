@@ -1,0 +1,82 @@
+[
+  {
+    "id": "IND-JAM-01",
+    "name": "Jamnagar Mega Refinery Complex (Reliance / Nayara)",
+    "type": "refinery",
+    "latitude": 22.4707,
+    "longitude": 70.0577,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "CRITICAL",
+    "description": "World's largest oil refining hub with continuous processing, high thermal cracking, and offshore marine terminals."
+  },
+  {
+    "id": "IND-ANG-02",
+    "name": "Angul Integrated Steel & Pellet Plant (JSP)",
+    "type": "steel_plant",
+    "latitude": 20.8410,
+    "longitude": 85.1520,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "CRITICAL",
+    "description": "Integrated blast furnace, DRI units, and heavy industrial metallurgy processing zone."
+  },
+  {
+    "id": "IND-SIN-03",
+    "name": "Singrauli Super Thermal Power & Coal Basin (NTPC)",
+    "type": "power_plant",
+    "latitude": 24.1205,
+    "longitude": 82.6840,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "HIGH",
+    "description": "Dense thermal energy production hub with massive coal handling, ash ponds, and open-cast mining."
+  },
+  {
+    "id": "IND-PAR-04",
+    "name": "Paradeep Petrochemicals & Fertilizer Complex (IOCL / IFFCO)",
+    "type": "petrochemical",
+    "latitude": 20.2980,
+    "longitude": 86.6850,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "CRITICAL",
+    "description": "Coastal petrochemical cracker, polymer units, hydrocarbon storage tanks, and fertilizer synthesis."
+  },
+  {
+    "id": "IND-CHE-05",
+    "name": "Chembur Trombay Petrochemical & Fertilizer Corridor",
+    "type": "refinery",
+    "latitude": 19.0150,
+    "longitude": 72.8980,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "CRITICAL",
+    "description": "Dense urban industrial refinery hub (BPCL/HPCL/RCF) located directly adjacent to populated metropolitan wards."
+  },
+  {
+    "id": "IND-VIZ-06",
+    "name": "Visakhapatnam Steel Plant & Industrial Cluster (RINL / HPCL)",
+    "type": "steel_plant",
+    "latitude": 17.6890,
+    "longitude": 83.2180,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "HIGH",
+    "description": "Major deep-water industrial complex featuring blast furnaces, coke ovens, and petroleum terminals."
+  },
+  {
+    "id": "IND-DAH-07",
+    "name": "Dahej Petroleum, Chemicals & Petrochemicals Investment Region (PCPIR)",
+    "type": "chemical_facility",
+    "latitude": 21.7100,
+    "longitude": 72.5800,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "CRITICAL",
+    "description": "SEZ port chemical hub hosting cryogenic LNG regasification, chlorine synthesis, and specialty petrochemicals."
+  },
+  {
+    "id": "IND-KOR-08",
+    "name": "Korba Coal Power & Aluminium Smelting Belt (BALCO / NTPC)",
+    "type": "power_plant",
+    "latitude": 22.3595,
+    "longitude": 82.7501,
+    "source": "OpenStreetMap/Overpass",
+    "risk_category": "HIGH",
+    "description": "Concentrated pithead thermal generation and high-amperage aluminium electrolysis smelters."
+  }
+]

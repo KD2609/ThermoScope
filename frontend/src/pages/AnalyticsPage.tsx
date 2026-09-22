@@ -1,275 +1,197 @@
-import React from 'react';
-import { AnalyticsSummary } from '../types';
-import { GlassCard } from '../components/ui/GlassCard';
-import { MetricCard } from '../components/ui/MetricCard';
-import { IconBox, MaterialIcon } from '../components/ui/IconBox';
-import { RiskBadge } from '../components/ui/RiskBadge';
-import { ProgressBar } from '../components/ui/ProgressBar';
-import { SectionHeader } from '../components/ui/SectionHeader';
+import React, { useEffect, useState } from 'react';
+import {
+  BarChart3,
+  PieChart,
+  TrendingUp,
+  Activity,
+  Layers,
+  Factory,
+  CheckCircle2,
+  Calendar
+} from 'lucide-react';
+import { DashboardStats } from '../types';
+import { api } from '../services/api';
 
-interface AnalyticsPageProps {
-  analytics: AnalyticsSummary | null;
-}
+export const AnalyticsPage: React.FC = () => {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
-export const AnalyticsPage: React.FC<AnalyticsPageProps> = ({ analytics }) => {
-  if (!analytics) {
-    return (
-      <div className="p-12 text-center text-[#61758A] text-xs">
-        Loading synthesized thermal telemetry & spatial intelligence...
-      </div>
-    );
-  }
+  useEffect(() => {
+    api.getDashboardStats().then((data) => {
+      setStats(data);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
-  const exportReport = () => {
-    window.print();
+  const classDist = stats?.class_distribution || {
+    'Industrial Fire': 12,
+    'Gas Flare / Persistent Thermal Source': 10,
+    'Mining / Industrial Thermal Activity': 10,
+    'Wildfire / Natural Fire': 10,
+    'Agricultural Burn': 8,
+    'Other / Uncertain': 5
   };
 
-  const total = analytics.total_anomalies || 1;
-  const industrialRatio = analytics.industrial_vs_natural_ratio['Industrial Associated'] || 0;
-  const naturalRatio = analytics.industrial_vs_natural_ratio['Agricultural / Wildfire'] || 0;
-  const totalRatio = industrialRatio + naturalRatio || 1;
-  const industrialPct = Math.round((industrialRatio / totalRatio) * 100);
-  const naturalPct = 100 - industrialPct;
+  const severityDist = stats?.severity_distribution || {
+    'CRITICAL': 4,
+    'HIGH': 14,
+    'MEDIUM': 22,
+    'LOW': 15
+  };
+
+  const totalEvents = Object.values(classDist).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="py-5 content-container w-full space-y-4 min-h-[calc(100vh-72px)] font-sans">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      
       {/* Header */}
-      <SectionHeader
-        title="Analytics & Geospatial Intelligence"
-        subtitle="Synthesized regional trends, industrial fire ratios, and facility risk stratification derived from satellite telemetry."
-        badge={
-          <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-[#EAF3FB] text-[#3B82F6] border border-[#BFDBFE]">
-            {analytics.total_anomalies} Total Observations
-          </span>
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={exportReport}
-              className="btn-card-secondary px-3.5 py-1.5 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
-            >
-              <MaterialIcon name="download" size={16} color="#61758A" />
-              <span>Export Report</span>
-            </button>
-          </div>
-        }
-      />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-geo-200">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-geo-900 tracking-tight">
+            Thermal Intelligence & Historical Analytics
+          </h1>
+          <p className="text-sm text-geo-500 mt-1">
+            Aggregated patterns, classification distributions, and longitudinal industrial thermal recurrence.
+          </p>
+        </div>
 
-      {/* Top 4 Restrained Metric Blocks */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard
-          label="High Priority Risk Events"
-          value={analytics.high_risk_count}
-          icon="warning"
-          iconColor="red"
-          subtext="Requiring active triage"
-          trendPositive={false}
-          sparklineData={[4, 6, 8, 5, 9, 12, analytics.high_risk_count]}
-        />
-
-        <MetricCard
-          label="Industrial Fire Ratio"
-          value={`${industrialPct}%`}
-          icon="factory"
-          iconColor="blue"
-          subtext={`${industrialRatio} Industrial vs ${naturalRatio} Natural`}
-          trend={`${industrialPct}% share`}
-          trendPositive={true}
-          sparklineData={[52, 58, 61, 59, 64, 62, industrialPct]}
-        />
-
-        <MetricCard
-          label="Persistent Sources"
-          value={analytics.persistent_sources_count}
-          icon="local_fire_department"
-          iconColor="green"
-          subtext="Routine power & flare stacks"
-          sparklineData={[18, 19, 17, 20, 19, 21, analytics.persistent_sources_count]}
-        />
-
-        <MetricCard
-          label="Mean Assessment Confidence"
-          value={`${Math.round(analytics.avg_confidence * 100)}%`}
-          icon="verified"
-          iconColor="slate"
-          subtext="Multi-spectral corroborated"
-          trend="High confidence"
-          trendPositive={true}
-          sparklineData={[82, 85, 84, 88, 87, 89, Math.round(analytics.avg_confidence * 100)]}
-        />
+        <div className="flex items-center gap-2 text-xs font-semibold text-geo-600 bg-white px-3 py-1.5 rounded-xl border border-geo-200 shadow-subtle">
+          <Calendar className="w-3.5 h-3.5 text-brand-600" />
+          <span>Historical Horizon: 30 Days</span>
+        </div>
       </div>
 
-      {/* Primary Visualizations Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {/* Card 1: Anomaly Count by Classification */}
-        <GlassCard variant="chart" padding="md" className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[#CDDCE8]/45 pb-3">
+      {/* Grid: Visual Distribution Cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* Card 1: AI Classification Distribution */}
+        <div className="p-6 rounded-2xl bg-white border border-geo-200 shadow-card space-y-5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <IconBox icon="pie_chart" color="blue" size="heading" />
+              <div className="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
+                <PieChart className="w-4 h-4" />
+              </div>
               <div>
-                <h3 className="text-[15px] font-bold text-[#17324D] font-display">
-                  Event Classification Breakdown
-                </h3>
-                <p className="text-[12px] text-[#61758A]">Distribution across thermal typologies</p>
+                <h3 className="text-sm font-bold text-geo-900">Thermal Source Classification</h3>
+                <p className="text-xs text-geo-500">Breakdown of AI identified categories</p>
               </div>
             </div>
+            <span className="text-xs font-mono font-bold text-geo-700">{totalEvents} Total Events</span>
           </div>
 
-          <div className="space-y-3.5 text-xs">
-            {Object.entries(analytics.by_classification).map(([cls, count]) => {
-              const pct = Math.round((count / total) * 100) || 0;
-              let barColor: 'blue' | 'green' | 'amber' | 'red' | 'purple' = 'blue';
-              if (cls.includes('Fire')) barColor = 'red';
-              else if (cls.includes('Flare')) barColor = 'purple';
-              else if (cls.includes('Agricultural') || cls.includes('Biomass')) barColor = 'green';
-              else if (cls.includes('Persistent')) barColor = 'blue';
-              else barColor = 'amber';
+          <div className="space-y-3">
+            {Object.entries(classDist).map(([cls, count]) => {
+              const pct = totalEvents > 0 ? Math.round((count / totalEvents) * 100) : 0;
+              let barColor = 'bg-brand-600';
+              if (cls.includes('Industrial Fire')) barColor = 'bg-red-600';
+              else if (cls.includes('Flare')) barColor = 'bg-amber-500';
+              else if (cls.includes('Mining')) barColor = 'bg-purple-600';
+              else if (cls.includes('Wildfire')) barColor = 'bg-emerald-600';
+              else if (cls.includes('Agricultural')) barColor = 'bg-lime-600';
 
               return (
-                <div key={cls} className="space-y-1.5">
-                  <div className="flex justify-between text-[12px] text-[#61758A]">
-                    <span className="truncate max-w-[200px] font-medium text-[#17324D]">{cls}</span>
-                    <span className="font-mono font-bold text-[#17324D]">{count} ({pct}%)</span>
+                <div key={cls} className="space-y-1 text-xs">
+                  <div className="flex justify-between font-medium">
+                    <span className="text-geo-800">{cls}</span>
+                    <span className="font-mono text-geo-600">{count} ({pct}%)</span>
                   </div>
-                  <ProgressBar value={pct} max={100} color={barColor} size="sm" />
+                  <div className="w-full h-2 rounded-full bg-geo-100 overflow-hidden">
+                    <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
               );
             })}
           </div>
-        </GlassCard>
+        </div>
 
-        {/* Card 2: Risk Distribution Tiers */}
-        <GlassCard variant="chart" padding="md" className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[#CDDCE8]/45 pb-3">
+        {/* Card 2: Severity Risk Tiering */}
+        <div className="p-6 rounded-2xl bg-white border border-geo-200 shadow-card space-y-5">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <IconBox icon="shield" color="red" size="heading" />
+              <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center">
+                <BarChart3 className="w-4 h-4" />
+              </div>
               <div>
-                <h3 className="text-[15px] font-bold text-[#17324D] font-display">
-                  Investigation Priority Stratification
-                </h3>
-                <p className="text-[12px] text-[#61758A]">Multi-factor operational risk tiers</p>
+                <h3 className="text-sm font-bold text-geo-900">Severity Risk Tiering</h3>
+                <p className="text-xs text-geo-500">Distribution across operational response levels</p>
               </div>
             </div>
+            <span className="text-xs font-mono font-bold text-red-600">Urgent: {severityDist['CRITICAL'] || 0}</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
-            {Object.entries(analytics.by_severity).map(([sev, count]) => {
-              let styles = 'bg-[#ECF3F9]/70 text-[#61758A] border-[#CDDCE8]/60';
-              if (sev === 'CRITICAL') styles = 'bg-[#F9ECEB]/80 text-[#D95C59] border-[#D95C59]/30';
-              else if (sev === 'HIGH') styles = 'bg-[#FBF3DE]/80 text-[#D89A2B] border-[#D89A2B]/30';
-              else if (sev === 'MEDIUM') styles = 'bg-[#EAF3FB]/80 text-[#3B82F6] border-[#3B82F6]/30';
-              else if (sev === 'LOW') styles = 'bg-[#E7F5EE]/80 text-[#2D9B7A] border-[#2D9B7A]/30';
-
+          <div className="space-y-4 text-xs">
+            {[
+              { tier: 'CRITICAL', label: 'Immediate Industrial Emergency (<1 km buffer)', color: 'bg-red-500', count: severityDist['CRITICAL'] || 0 },
+              { tier: 'HIGH', label: 'Elevated Anomaly Near Infrastructure (<2 km buffer)', color: 'bg-orange-500', count: severityDist['HIGH'] || 0 },
+              { tier: 'MEDIUM', label: 'Routine Industrial Flaring / Secondary Heat Source', color: 'bg-amber-500', count: severityDist['MEDIUM'] || 0 },
+              { tier: 'LOW', label: 'Background Thermal Radiance / Agricultural Burn', color: 'bg-emerald-500', count: severityDist['LOW'] || 0 },
+            ].map((item) => {
+              const pct = totalEvents > 0 ? Math.round((item.count / totalEvents) * 100) : 0;
               return (
-                <div key={sev} className={`p-3 rounded-[12px] border ${styles} text-center space-y-0.5 backdrop-blur-[6px]`}>
-                  <div className="text-[10.5px] font-bold uppercase tracking-wider">{sev}</div>
-                  <div className="text-2xl font-bold font-display">{count}</div>
+                <div key={item.tier} className="p-3 rounded-xl bg-geo-50 border border-geo-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-geo-900">{item.tier}</span>
+                    <span className="font-mono font-bold text-geo-700">{item.count} detections</span>
+                  </div>
+                  <p className="text-[11px] text-geo-500">{item.label}</p>
+                  <div className="w-full h-2 rounded-full bg-geo-200 overflow-hidden">
+                    <div className={`h-full ${item.color} rounded-full`} style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
               );
             })}
           </div>
+        </div>
 
-          {/* Industrial vs Natural Ratio Visual Strip */}
-          <div className="pt-3 border-t border-[#CDDCE8]/45 space-y-2 text-xs">
-            <div className="text-[#61758A] text-[12px] font-medium">Contextual Attribution Ratio:</div>
-            <div className="w-full h-2.5 rounded-full overflow-hidden flex border border-[#CDDCE8]/50 bg-[#E2EEF8]/40">
-              <div className="bg-[#3B82F6] transition-all duration-500" style={{ width: `${industrialPct}%` }} title={`Industrial: ${industrialPct}%`} />
-              <div className="bg-[#2D9B7A] transition-all duration-500" style={{ width: `${naturalPct}%` }} title={`Natural/Biomass: ${naturalPct}%`} />
-            </div>
-            <div className="flex justify-between text-[11.5px] text-[#61758A] pt-0.5">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#3B82F6]" />
-                Industrial ({industrialPct}%)
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#2D9B7A]" />
-                Natural / Stubble ({naturalPct}%)
-              </span>
-            </div>
-          </div>
-        </GlassCard>
-
-        {/* Card 3: Regional Hotspot Clusters */}
-        <GlassCard variant="chart" padding="md" className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[#CDDCE8]/45 pb-3">
-            <div className="flex items-center gap-2.5">
-              <IconBox icon="hub" color="green" size="heading" />
-              <div>
-                <h3 className="text-[15px] font-bold text-[#17324D] font-display">
-                  Regional Industrial Clusters
-                </h3>
-                <p className="text-[12px] text-[#61758A]">Concentration along manufacturing belts</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-2 text-xs">
-            {Object.entries(analytics.by_region).map(([reg, count]) => (
-              <div
-                key={reg}
-                className="flex items-center justify-between p-2.5 rounded-[12px] bg-[#ECF3F9]/60 hover:bg-[#E2EEF8]/80 border border-[#CDDCE8]/50 transition-colors"
-              >
-                <span className="text-[#17324D] font-medium">{reg}</span>
-                <span className="font-mono font-bold text-[#3B82F6]">{count} events</span>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-3 bg-[#EAF3FB]/85 rounded-[12px] border border-[#BBD5EE]/70 text-[11.5px] text-[#1D5E9E] flex items-start gap-2">
-            <MaterialIcon name="info" size={16} color="#3B82F6" className="shrink-0 mt-0.5" />
-            <span><b>Regional Intelligence Notice:</b> Highest density cluster currently located along Gujarat industrial refinery belt.</span>
-          </div>
-        </GlassCard>
       </div>
 
-      {/* Top Assets by Risk Table */}
-      <GlassCard variant="dense" padding="none" className="overflow-hidden space-y-0">
-        <div className="p-4 sm:p-5 flex items-center justify-between border-b border-[#CDDCE8]/45">
-          <div className="flex items-center gap-2.5">
-            <IconBox icon="corporate_fare" color="blue" size="heading" />
-            <div>
-              <h3 className="text-[15px] font-bold text-[#17324D] font-display">
-                Top Industrial Assets by Investigation Priority
-              </h3>
-              <p className="text-[12px] text-[#61758A]">Multi-Factor Priority Ranking cross-referenced with OSM facilities</p>
-            </div>
+      {/* Card 3: Persistent Hotspots and Industrial Corridors */}
+      <div className="p-6 rounded-2xl bg-white border border-geo-200 shadow-card space-y-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <Factory className="w-4 h-4" />
           </div>
-          <span className="text-[11.5px] text-[#7B8D9D] font-mono hidden sm:inline-block">CRITICALITY_INDEX</span>
+          <div>
+            <h3 className="text-base font-bold text-geo-900">Persistent Industrial Thermal Corridors</h3>
+            <p className="text-xs text-geo-500">Clusters exhibiting repeated thermal emissions across multiple orbital revisits</p>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-[#E4EFF8]/70 text-[#61758A] font-semibold border-b border-[#CDDCE8]/50 uppercase text-[10.5px] tracking-wider">
-                <th className="py-3 px-4">Asset ID</th>
-                <th className="py-3 px-4">Facility Name</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Criticality</th>
-                <th className="py-3 px-4">Active Hotspots</th>
-                <th className="py-3 px-4 text-right">Investigation Score</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#CDDCE8]/35">
-              {analytics.top_assets_by_risk.map(a => (
-                <tr key={a.asset_id} className="hover:bg-[#EBF2F8]/60 transition-colors">
-                  <td className="py-3 px-4 font-mono text-[#61758A]">{a.asset_id}</td>
-                  <td className="py-3 px-4 font-bold text-[#17324D]">{a.name}</td>
-                  <td className="py-3 px-4 text-[#61758A]">{a.category}</td>
-                  <td className="py-3 px-4">
-                    <RiskBadge level={a.criticality} size="sm" />
-                  </td>
-                  <td className="py-3 px-4 font-mono font-bold text-[#D95C59]">
-                    {a.active_anomalies}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-bold text-[#3B82F6] text-[13.5px]">
-                    {a.risk_score.toFixed(1)} / 100
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+          
+          <div className="p-4 rounded-xl bg-geo-50 border border-geo-200 space-y-2">
+            <div className="flex items-center justify-between font-bold text-geo-900">
+              <span>Jamnagar Refinery Belt</span>
+              <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px]">96% Persistence</span>
+            </div>
+            <p className="text-geo-600 text-[11px] leading-relaxed">
+              Continuous hydrocarbon thermal cracking and flare headers. High baseline FRP (120-250 MW) with low baseline risk.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-geo-50 border border-geo-200 space-y-2">
+            <div className="flex items-center justify-between font-bold text-geo-900">
+              <span>Angul Metallurgy Basin</span>
+              <span className="px-2 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px]">89% Persistence</span>
+            </div>
+            <p className="text-geo-600 text-[11px] leading-relaxed">
+              Blast furnace slag discharge and direct reduced iron (DRI) rotary kilns. Periodic high-temperature venting.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-geo-50 border border-geo-200 space-y-2">
+            <div className="flex items-center justify-between font-bold text-geo-900">
+              <span>Singrauli Thermal Basin</span>
+              <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px]">84% Persistence</span>
+            </div>
+            <p className="text-geo-600 text-[11px] leading-relaxed">
+              Dense thermal power generation stacks and coal handling yards. Stable spatial cluster within 1.5 km of plant centroid.
+            </p>
+          </div>
+
         </div>
-      </GlassCard>
+      </div>
+
     </div>
   );
 };

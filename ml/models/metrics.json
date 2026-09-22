@@ -1,0 +1,147 @@
+{
+  "model_version": "v1.0.0",
+  "algorithm": "RandomForestClassifier",
+  "training_timestamp": "2026-09-17T19:18:00.321192+00:00",
+  "total_samples": 60,
+  "train_samples": 45,
+  "test_samples": 15,
+  "accuracy": 1.0,
+  "macro_f1": 1.0,
+  "weighted_f1": 1.0,
+  "classes": [
+    "Agricultural Burn",
+    "Gas Flare / Persistent Thermal Source",
+    "Industrial Fire",
+    "Mining / Industrial Thermal Activity",
+    "Other / Uncertain",
+    "Wildfire / Natural Fire"
+  ],
+  "classification_report": {
+    "Agricultural Burn": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 2.0
+    },
+    "Gas Flare / Persistent Thermal Source": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 3.0
+    },
+    "Industrial Fire": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4.0
+    },
+    "Mining / Industrial Thermal Activity": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 2.0
+    },
+    "Other / Uncertain": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 1.0
+    },
+    "Wildfire / Natural Fire": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 3.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 15.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 15.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      2,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      3,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      4,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      2,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      3
+    ]
+  ],
+  "top_features": {
+    "brightness_temperature": 0.12524997814018685,
+    "distance_to_industrial_site": 0.10574729719425517,
+    "distance_to_residential_area": 0.09279668805558963,
+    "fire_cluster_density": 0.07784554839644446,
+    "frp": 0.07442095690849156,
+    "hour_sin": 0.07213234597958862,
+    "historical_fire_count": 0.07045757968392008,
+    "persistence_score": 0.07002413203566774,
+    "confidence": 0.0682828571595687,
+    "land_cover_forest": 0.05499443843885461,
+    "land_cover_cropland": 0.03712703086576679,
+    "hour_cos": 0.033495371115753535,
+    "ind_type_none": 0.03152209730850655,
+    "land_cover_urban": 0.03143762806582736,
+    "is_night": 0.012176006288918252,
+    "ind_type_steel_plant": 0.01189072321052151,
+    "ind_type_petrochemical": 0.009775371171564365,
+    "ind_type_refinery": 0.008609656779716453,
+    "ind_type_power_plant": 0.006053529192144428,
+    "land_cover_industrial": 0.00596076400871347,
+    "land_cover_urban_industrial": 1.1206631725707852e-17,
+    "ind_type_chemical_facility": 0.0,
+    "land_cover_barren": 0.0,
+    "land_cover_other": 0.0
+  },
+  "note": "Production pipeline baseline trained on curated historical and industrial observations. Expand data/training_data.csv with verified incidents to retrain."
+}

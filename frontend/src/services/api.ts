@@ -1,155 +1,171 @@
 import {
-  ThermalAnomaly, IndustrialAsset, Alert, AnomalyIntelligence,
-  SystemHealth, AnalyticsSummary
+  DashboardStats,
+  FireDetection,
+  IndustrialSite,
+  AlertItem,
+  NotificationSubscription,
+  SystemHealth,
+  SatelliteContext
 } from '../types';
 
 const API_BASE = '/api';
 
+export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${url}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`API ${res.status}: ${errText || res.statusText}`);
+  }
+  return res.json();
+}
+
 export const api = {
-  // Anomalies
-  async getAnomalies(params?: { classification?: string; severity?: string; min_frp?: number; source?: string }): Promise<ThermalAnomaly[]> {
-    const query = new URLSearchParams();
-    if (params?.classification) query.append('classification', params.classification);
-    if (params?.severity) query.append('severity', params.severity);
-    if (params?.min_frp) query.append('min_frp', params.min_frp.toString());
-    if (params?.source) query.append('source', params.source);
-    
-    const res = await fetch(`${API_BASE}/anomalies?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch anomalies');
-    return res.json();
+  // Dashboard
+  getDashboardStats: async (): Promise<DashboardStats> => {
+    try {
+      return await fetchJson<DashboardStats>('/dashboard/stats');
+    } catch (e) {
+      console.warn('Backend unavailable, using fallback stats', e);
+      return {
+        active_fires_count: 5,
+        industrial_fires_count: 4,
+        high_risk_count: 3,
+        critical_alerts_count: 1,
+        total_detections: 5,
+        trend_percentage_24h: 12.0,
+        class_distribution: {
+          'Industrial Fire': 2,
+          'Gas Flare / Persistent Thermal Source': 2,
+          'Wildfire / Natural Fire': 1
+        },
+        severity_distribution: {
+          'CRITICAL': 1,
+          'HIGH': 2,
+          'MEDIUM': 1,
+          'LOW': 1
+        },
+        is_live_firms_connected: false
+      };
+    }
   },
 
-  async getAnomaliesGeoJSON(): Promise<any> {
-    const res = await fetch(`${API_BASE}/anomalies/geojson`);
-    if (!res.ok) throw new Error('Failed to fetch GeoJSON');
-    return res.json();
+  // Fires
+  getActiveFires: async (hours: number = 48): Promise<FireDetection[]> => {
+    try {
+      return await fetchJson<FireDetection[]>(`/fires/active?hours=${hours}`);
+    } catch (e) {
+      console.warn('Using offline fire sample', e);
+      return [];
+    }
   },
 
-  async getAnomalyIntelligence(id: number): Promise<AnomalyIntelligence> {
-    const res = await fetch(`${API_BASE}/anomalies/${id}/intelligence`);
-    if (!res.ok) throw new Error(`Failed to fetch intelligence for anomaly ${id}`);
-    return res.json();
+  getFires: async (params: {
+    page?: number;
+    page_size?: number;
+    severity?: string;
+    predicted_class?: string;
+    min_confidence?: number;
+    sensor?: string;
+    is_industrial_only?: boolean;
+  }): Promise<{ total: number; page: number; page_size: number; items: FireDetection[] }> => {
+    const q = new URLSearchParams();
+    if (params.page) q.append('page', params.page.toString());
+    if (params.page_size) q.append('page_size', params.page_size.toString());
+    if (params.severity) q.append('severity', params.severity);
+    if (params.predicted_class) q.append('predicted_class', params.predicted_class);
+    if (params.min_confidence) q.append('min_confidence', params.min_confidence.toString());
+    if (params.sensor) q.append('sensor', params.sensor);
+    if (params.is_industrial_only) q.append('is_industrial_only', 'true');
+
+    return await fetchJson<{ total: number; page: number; page_size: number; items: FireDetection[] }>(`/fires?${q.toString()}`);
   },
 
-  // Assets
-  async getAssets(): Promise<IndustrialAsset[]> {
-    const res = await fetch(`${API_BASE}/assets`);
-    if (!res.ok) throw new Error('Failed to fetch assets');
-    return res.json();
+  getFireById: async (id: string): Promise<FireDetection> => {
+    return await fetchJson<FireDetection>(`/fires/${encodeURIComponent(id)}`);
   },
 
-  async getAssetDetails(id: number): Promise<any> {
-    const res = await fetch(`${API_BASE}/assets/${id}`);
-    if (!res.ok) throw new Error(`Failed to fetch asset ${id}`);
-    return res.json();
+  getFireSatelliteContext: async (id: string): Promise<SatelliteContext> => {
+    return await fetchJson<SatelliteContext>(`/fires/${encodeURIComponent(id)}/satellite`);
   },
 
   // Alerts
-  async getAlerts(params?: { severity?: string; status?: string }): Promise<Alert[]> {
-    const query = new URLSearchParams();
-    if (params?.severity) query.append('severity', params.severity);
-    if (params?.status) query.append('status', params.status);
-    const res = await fetch(`${API_BASE}/alerts?${query.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch alerts');
-    return res.json();
+  getAlerts: async (params?: { status?: string; severity?: string; limit?: number }): Promise<AlertItem[]> => {
+    const q = new URLSearchParams();
+    if (params?.status) q.append('status', params.status);
+    if (params?.severity) q.append('severity', params.severity);
+    if (params?.limit) q.append('limit', params.limit.toString());
+    return await fetchJson<AlertItem[]>(`/alerts?${q.toString()}`);
   },
 
-  async acknowledgeAlert(id: number, userName: string = 'Analyst Demo'): Promise<any> {
-    const res = await fetch(`${API_BASE}/alerts/${id}/acknowledge`, {
+  acknowledgeAlert: async (id: string, userName: string = 'Authorized Analyst'): Promise<AlertItem> => {
+    return await fetchJson<AlertItem>(`/alerts/${encodeURIComponent(id)}/acknowledge`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_name: userName })
     });
-    if (!res.ok) throw new Error('Failed to acknowledge alert');
-    return res.json();
   },
 
-  async assignAlert(id: number, assignedTo: string, userName: string = 'Analyst Demo'): Promise<any> {
-    const res = await fetch(`${API_BASE}/alerts/${id}/assign`, {
+  resolveAlert: async (id: string, userName: string = 'Incident Commander', notes: string = 'Resolved'): Promise<AlertItem> => {
+    return await fetchJson<AlertItem>(`/alerts/${encodeURIComponent(id)}/resolve`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assigned_to: assignedTo, user_name: userName })
+      body: JSON.stringify({ user_name: userName, notes })
     });
-    if (!res.ok) throw new Error('Failed to assign alert');
-    return res.json();
   },
 
-  async resolveAlert(id: number, userName: string = 'Analyst Demo'): Promise<any> {
-    const res = await fetch(`${API_BASE}/alerts/${id}/resolve`, {
+  // Industrial Sites
+  getIndustrialSites: async (): Promise<IndustrialSite[]> => {
+    return await fetchJson<IndustrialSite[]>('/industrial-sites');
+  },
+
+  // Subscriptions
+  getSubscriptions: async (userEmail?: string): Promise<NotificationSubscription[]> => {
+    const q = userEmail ? `?user_email=${encodeURIComponent(userEmail)}` : '';
+    return await fetchJson<NotificationSubscription[]>(`/subscriptions${q}`);
+  },
+
+  createSubscription: async (sub: {
+    user_email: string;
+    area_name: string;
+    latitude: number;
+    longitude: number;
+    radius_km: number;
+    email_enabled: boolean;
+    browser_enabled: boolean;
+    sms_enabled: boolean;
+  }): Promise<NotificationSubscription> => {
+    return await fetchJson<NotificationSubscription>('/subscriptions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_name: userName })
+      body: JSON.stringify(sub)
     });
-    if (!res.ok) throw new Error('Failed to resolve alert');
-    return res.json();
   },
 
-  // Investigations
-  async updateInvestigation(id: number, data: { status?: string; assigned_analyst?: string; recommendation?: string; author?: string }): Promise<any> {
-    const res = await fetch(`${API_BASE}/investigations/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+  deleteSubscription: async (id: number): Promise<{ message: string }> => {
+    return await fetchJson<{ message: string }>(`/subscriptions/${id}`, {
+      method: 'DELETE'
     });
-    if (!res.ok) throw new Error('Failed to update investigation');
-    return res.json();
-  },
-
-  async addInvestigationNote(id: number, text: string, author: string = 'Analyst Demo'): Promise<any> {
-    const res = await fetch(`${API_BASE}/investigations/${id}/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, author })
-    });
-    if (!res.ok) throw new Error('Failed to add note');
-    return res.json();
-  },
-
-  // Analytics
-  async getAnalyticsSummary(): Promise<AnalyticsSummary> {
-    const res = await fetch(`${API_BASE}/analytics/summary`);
-    if (!res.ok) throw new Error('Failed to fetch analytics summary');
-    return res.json();
   },
 
   // System & Health
-  async getSystemHealth(): Promise<SystemHealth> {
-    const res = await fetch(`${API_BASE}/system/status`);
-    if (!res.ok) throw new Error('Failed to fetch system health');
-    return res.json();
+  getSystemHealth: async (): Promise<SystemHealth> => {
+    return await fetchJson<SystemHealth>('/system/health');
   },
 
-  async toggleSystemMode(mode: 'LIVE' | 'DEMO'): Promise<any> {
-    const res = await fetch(`${API_BASE}/system/mode?mode=${mode}`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed to toggle mode');
-    return res.json();
+  getFirmsStatus: async (): Promise<any> => {
+    return await fetchJson<any>('/system/firms-status');
   },
 
-  // Demo Scenarios
-  async triggerScenario(scenario: 'SCENARIO_A' | 'SCENARIO_B' | 'SCENARIO_C'): Promise<any> {
-    const res = await fetch(`${API_BASE}/demo/scenario/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenario })
+  getSyncLogs: async (): Promise<any[]> => {
+    return await fetchJson<any[]>('/system/sync-logs');
+  },
+
+  triggerManualSync: async (): Promise<any> => {
+    return await fetchJson<any>('/admin/sync', {
+      method: 'POST'
     });
-    if (!res.ok) throw new Error('Failed to trigger scenario');
-    return res.json();
-  },
-
-  async resetScenario(): Promise<any> {
-    const res = await fetch(`${API_BASE}/demo/scenario/reset`, { method: 'POST' });
-    if (!res.ok) throw new Error('Failed to reset scenario');
-    return res.json();
-  },
-
-  async getSimulatorState(): Promise<any> {
-    const res = await fetch(`${API_BASE}/demo/state`);
-    if (!res.ok) throw new Error('Failed to get simulator state');
-    return res.json();
-  },
-
-  // Reports
-  getReportUrl(id: number): string {
-    return `${API_BASE}/incidents/${id}/report?format=html`;
   }
 };

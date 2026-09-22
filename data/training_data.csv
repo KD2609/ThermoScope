@@ -1,0 +1,61 @@
+latitude,longitude,detection_time,brightness_temperature,frp,confidence,day_night,historical_fire_count,persistence_score,distance_to_industrial_site,industrial_site_type,distance_to_residential_area,land_cover,fire_cluster_density,target_class
+22.4707,70.0577,2026-09-12T14:30:00Z,365.2,142.5,95,N,24,0.92,0.45,refinery,3.20,industrial,0.85,Gas Flare / Persistent Thermal Source
+22.4691,70.0612,2026-09-13T01:15:00Z,388.4,210.8,98,N,28,0.95,0.30,refinery,2.90,industrial,0.90,Gas Flare / Persistent Thermal Source
+22.4812,70.0489,2026-09-14T18:40:00Z,445.0,480.2,100,N,3,0.25,0.80,refinery,1.40,industrial,0.65,Industrial Fire
+20.8410,85.1520,2026-09-11T11:20:00Z,420.5,310.0,92,D,5,0.40,0.60,steel_plant,2.10,industrial,0.70,Industrial Fire
+20.8395,85.1585,2026-09-12T03:10:00Z,355.8,98.4,85,N,19,0.88,0.35,steel_plant,2.40,industrial,0.75,Mining / Industrial Thermal Activity
+24.1205,82.6840,2026-09-10T09:45:00Z,348.6,85.0,80,D,16,0.82,0.90,power_plant,4.10,barren,0.55,Mining / Industrial Thermal Activity
+24.1350,82.6710,2026-09-12T13:00:00Z,360.2,115.3,88,D,22,0.89,0.50,power_plant,3.80,industrial,0.60,Mining / Industrial Thermal Activity
+20.2980,86.6850,2026-09-13T20:25:00Z,462.1,590.4,100,N,2,0.15,0.75,petrochemical,0.95,industrial,0.80,Industrial Fire
+20.3015,86.6790,2026-09-14T02:10:00Z,358.0,92.0,84,N,18,0.86,0.40,petrochemical,1.20,industrial,0.70,Gas Flare / Persistent Thermal Source
+19.0150,72.8980,2026-09-10T16:50:00Z,430.8,380.0,96,N,4,0.30,0.55,refinery,0.80,urban_industrial,0.78,Industrial Fire
+19.0182,72.9025,2026-09-11T00:30:00Z,362.4,105.0,89,N,25,0.94,0.25,refinery,0.90,urban_industrial,0.82,Gas Flare / Persistent Thermal Source
+17.6890,83.2180,2026-09-12T07:15:00Z,415.0,290.0,91,D,6,0.35,0.95,steel_plant,1.60,industrial,0.62,Industrial Fire
+17.6920,83.2250,2026-09-13T19:40:00Z,350.2,78.5,82,N,15,0.78,0.40,steel_plant,1.90,industrial,0.58,Mining / Industrial Thermal Activity
+31.1471,75.3412,2026-09-08T08:30:00Z,325.4,35.0,75,D,1,0.05,18.50,none,0.60,cropland,0.30,Agricultural Burn
+30.9010,75.8573,2026-09-09T07:45:00Z,332.1,42.0,78,D,2,0.08,14.20,none,0.85,cropland,0.35,Agricultural Burn
+29.9457,76.8173,2026-09-10T09:10:00Z,328.6,38.5,72,D,1,0.04,22.10,none,0.70,cropland,0.28,Agricultural Burn
+28.6139,77.2090,2026-09-11T12:00:00Z,312.0,15.2,55,D,0,0.00,8.50,none,0.10,urban,0.12,Other / Uncertain
+12.9716,77.5946,2026-09-07T14:15:00Z,310.5,12.0,50,D,0,0.00,12.00,none,0.15,urban,0.08,Other / Uncertain
+23.8315,91.2868,2026-09-05T13:40:00Z,342.0,65.0,70,D,1,0.05,28.00,none,4.50,forest,0.45,Wildfire / Natural Fire
+21.2514,81.6296,2026-09-06T15:20:00Z,355.0,88.0,76,D,2,0.10,32.00,none,6.20,forest,0.52,Wildfire / Natural Fire
+11.6643,76.5360,2026-09-07T10:05:00Z,348.2,74.0,74,D,1,0.08,45.00,none,8.50,forest,0.48,Wildfire / Natural Fire
+30.3165,78.0322,2026-09-08T11:50:00Z,360.5,102.0,82,D,2,0.12,38.00,none,5.80,forest,0.55,Wildfire / Natural Fire
+22.4740,70.0550,2026-09-15T02:00:00Z,368.0,155.0,94,N,30,0.96,0.38,refinery,3.10,industrial,0.88,Gas Flare / Persistent Thermal Source
+22.4650,70.0680,2026-09-15T16:10:00Z,450.2,510.0,100,N,4,0.32,0.70,refinery,2.20,industrial,0.80,Industrial Fire
+20.8450,85.1480,2026-09-14T22:30:00Z,352.1,82.0,83,N,21,0.89,0.42,steel_plant,2.30,industrial,0.72,Mining / Industrial Thermal Activity
+20.8350,85.1600,2026-09-15T10:45:00Z,435.0,420.0,97,D,7,0.45,0.65,steel_plant,1.80,industrial,0.78,Industrial Fire
+24.1180,82.6890,2026-09-13T21:15:00Z,358.4,110.0,87,N,23,0.91,0.48,power_plant,3.70,industrial,0.64,Mining / Industrial Thermal Activity
+24.1400,82.6650,2026-09-14T14:20:00Z,412.0,285.0,90,D,5,0.38,0.85,power_plant,3.10,industrial,0.68,Industrial Fire
+20.2950,86.6880,2026-09-15T01:40:00Z,364.5,108.0,88,N,20,0.87,0.35,petrochemical,1.15,industrial,0.74,Gas Flare / Persistent Thermal Source
+20.3050,86.6720,2026-09-15T18:00:00Z,470.0,630.0,100,N,3,0.20,0.68,petrochemical,0.85,industrial,0.84,Industrial Fire
+19.0120,72.8950,2026-09-14T03:00:00Z,360.0,98.0,86,N,26,0.95,0.28,refinery,0.85,urban_industrial,0.80,Gas Flare / Persistent Thermal Source
+19.0210,72.9050,2026-09-15T15:30:00Z,440.5,450.0,99,D,5,0.35,0.62,refinery,0.75,urban_industrial,0.82,Industrial Fire
+17.6850,83.2120,2026-09-14T12:30:00Z,425.0,340.0,94,D,8,0.42,0.88,steel_plant,1.50,industrial,0.66,Industrial Fire
+17.6950,83.2300,2026-09-15T23:10:00Z,354.0,84.0,84,N,17,0.80,0.38,steel_plant,1.85,industrial,0.60,Mining / Industrial Thermal Activity
+30.7500,75.4000,2026-09-12T08:15:00Z,322.0,32.0,73,D,1,0.06,19.00,none,0.55,cropland,0.32,Agricultural Burn
+30.2000,75.0000,2026-09-13T09:00:00Z,327.5,39.0,76,D,2,0.07,16.50,none,0.80,cropland,0.34,Agricultural Burn
+29.5000,76.2000,2026-09-14T07:30:00Z,330.0,41.0,75,D,1,0.05,20.00,none,0.65,cropland,0.30,Agricultural Burn
+26.8500,80.9500,2026-09-12T13:10:00Z,314.0,18.0,58,D,0,0.00,9.00,none,0.20,urban,0.15,Other / Uncertain
+25.6000,85.1000,2026-09-13T11:45:00Z,309.0,11.5,48,D,0,0.00,11.50,none,0.12,urban,0.10,Other / Uncertain
+24.5000,83.5000,2026-09-10T14:00:00Z,345.0,70.0,72,D,1,0.06,25.00,none,5.00,forest,0.42,Wildfire / Natural Fire
+22.0000,80.5000,2026-09-11T16:20:00Z,352.0,82.0,75,D,2,0.09,30.00,none,7.00,forest,0.50,Wildfire / Natural Fire
+13.5000,78.5000,2026-09-12T12:00:00Z,340.0,60.0,68,D,1,0.04,40.00,none,9.00,forest,0.40,Wildfire / Natural Fire
+31.5000,77.0000,2026-09-13T10:30:00Z,358.0,95.0,80,D,2,0.11,35.00,none,6.50,forest,0.52,Wildfire / Natural Fire
+22.4680,70.0630,2026-09-16T04:20:00Z,366.8,148.0,95,N,32,0.97,0.32,refinery,2.95,industrial,0.92,Gas Flare / Persistent Thermal Source
+22.4790,70.0510,2026-09-16T19:15:00Z,460.0,550.0,100,N,5,0.36,0.75,refinery,1.60,industrial,0.75,Industrial Fire
+20.8380,85.1550,2026-09-16T00:50:00Z,356.5,90.0,86,N,23,0.90,0.36,steel_plant,2.35,industrial,0.74,Mining / Industrial Thermal Activity
+20.8430,85.1500,2026-09-16T11:30:00Z,428.0,380.0,95,D,8,0.46,0.68,steel_plant,1.95,industrial,0.76,Industrial Fire
+24.1250,82.6800,2026-09-15T18:40:00Z,359.0,112.0,88,N,25,0.92,0.45,power_plant,3.75,industrial,0.65,Mining / Industrial Thermal Activity
+24.1380,82.6680,2026-09-16T13:50:00Z,418.0,310.0,92,D,6,0.40,0.80,power_plant,3.20,industrial,0.67,Industrial Fire
+20.2970,86.6830,2026-09-16T03:15:00Z,362.0,102.0,87,N,22,0.88,0.38,petrochemical,1.18,industrial,0.72,Gas Flare / Persistent Thermal Source
+20.3030,86.6750,2026-09-16T17:25:00Z,465.0,610.0,100,N,4,0.22,0.72,petrochemical,0.90,industrial,0.82,Industrial Fire
+19.0140,72.8970,2026-09-15T22:45:00Z,363.0,108.0,89,N,28,0.96,0.26,refinery,0.88,urban_industrial,0.82,Gas Flare / Persistent Thermal Source
+19.0190,72.9030,2026-09-16T14:10:00Z,445.0,470.0,99,D,6,0.38,0.58,refinery,0.78,urban_industrial,0.84,Industrial Fire
+17.6880,83.2160,2026-09-15T15:00:00Z,420.0,310.0,92,D,9,0.44,0.92,steel_plant,1.55,industrial,0.64,Industrial Fire
+17.6940,83.2280,2026-09-16T21:40:00Z,352.5,80.0,83,N,18,0.82,0.42,steel_plant,1.88,industrial,0.59,Mining / Industrial Thermal Activity
+31.0000,75.5000,2026-09-15T08:00:00Z,326.0,36.0,74,D,1,0.05,17.00,none,0.62,cropland,0.31,Agricultural Burn
+29.8000,76.5000,2026-09-16T08:45:00Z,329.0,40.0,76,D,2,0.08,18.00,none,0.72,cropland,0.33,Agricultural Burn
+28.5000,77.1000,2026-09-15T12:30:00Z,311.0,14.0,52,D,0,0.00,10.00,none,0.18,urban,0.11,Other / Uncertain
+23.0000,90.0000,2026-09-14T13:00:00Z,346.0,72.0,73,D,1,0.05,35.00,none,6.00,forest,0.44,Wildfire / Natural Fire
+12.0000,77.0000,2026-09-15T11:15:00Z,344.0,68.0,70,D,1,0.06,42.00,none,7.50,forest,0.42,Wildfire / Natural Fire

@@ -1,183 +1,280 @@
-from datetime import datetime
+"""SQLAlchemy Database Models for ThermoScope Geospatial Platform.
+Tables for Fire Detections, Predictions, Industrial Sites, Residential Areas,
+Alerts, Subscriptions, and Sync Audits.
+"""
+
+from datetime import datetime, timezone
+import json
 from sqlalchemy import (
-    Column, Integer, String, Float, DateTime, Boolean, ForeignKey, Text
+    Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Index
 )
 from sqlalchemy.orm import relationship
-from app.database import Base
+from backend.app.database import Base
 
-class ThermalAnomaly(Base):
-    __tablename__ = "thermal_anomalies"
 
-    id = Column(Integer, primary_key=True, index=True)
-    event_id = Column(String(64), unique=True, index=True, nullable=False)
+def utc_now():
+    return datetime.now(timezone.utc)
+
+
+class FireDetection(Base):
+    __tablename__ = "fire_detections"
+
+    id = Column(String(64), primary_key=True, index=True)
+    source = Column(String(64), default="NASA_FIRMS", index=True)
+    sensor = Column(String(64), default="VIIRS_SNPP", index=True)
     latitude = Column(Float, nullable=False, index=True)
     longitude = Column(Float, nullable=False, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    satellite = Column(String(32), default="VIIRS-NOAA21")
-    frp = Column(Float, nullable=False)  # Fire Radiative Power (MW)
-    brightness = Column(Float, default=320.0)  # Kelvin
-    source_confidence = Column(String(32), default="nominal")
-    daynight = Column(String(4), default="N")  # 'D' or 'N'
-    source = Column(String(64), default="DEMO_DATASET")  # 'NASA_FIRMS_LIVE', 'DEMO_DATASET', 'SYNTHETIC_SCENARIO'
-    processing_status = Column(String(32), default="PROCESSED")  # 'RAW', 'PROCESSED', 'CLASSIFIED'
-    is_simulated = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    detection_time = Column(DateTime, nullable=False, index=True)
+    brightness_temperature = Column(Float, nullable=False)
+    frp = Column(Float, nullable=True, default=0.0)
+    confidence = Column(Float, nullable=False, default=70.0)
+    day_night = Column(String(8), default="D")
+    satellite = Column(String(32), default="Suomi-NPP")
+    instrument = Column(String(32), default="VIIRS")
+    raw_payload = Column(Text, nullable=True)
+    dedup_hash = Column(String(64), unique=True, index=True, nullable=False)
+    is_demo_fallback = Column(Boolean, default=False, index=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    # Spatial indexes
+    __table_args__ = (
+        Index("idx_fire_lat_lon", "latitude", "longitude"),
+        Index("idx_fire_detection_time", "detection_time"),
+    )
 
     # Relationships
-    classification = relationship("ClassificationResult", back_populates="anomaly", uselist=False, cascade="all, delete-orphan")
-    risk_assessment = relationship("RiskAssessment", back_populates="anomaly", uselist=False, cascade="all, delete-orphan")
-    alert = relationship("Alert", back_populates="anomaly", uselist=False, cascade="all, delete-orphan")
-    investigation = relationship("Investigation", back_populates="anomaly", uselist=False, cascade="all, delete-orphan")
-    temporal_observations = relationship("TemporalObservation", back_populates="anomaly", cascade="all, delete-orphan")
+    prediction = relationship("FirePrediction", back_populates="detection", uselist=False, cascade="all, delete-orphan")
+    alerts = relationship("Alert", back_populates="detection", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "source": self.source,
+            "sensor": self.sensor,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "detection_time": self.detection_time.isoformat() if self.detection_time else None,
+            "brightness_temperature": self.brightness_temperature,
+            "frp": self.frp,
+            "confidence": self.confidence,
+            "day_night": self.day_night,
+            "satellite": self.satellite,
+            "instrument": self.instrument,
+            "is_demo_fallback": self.is_demo_fallback,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "prediction": self.prediction.to_dict() if self.prediction else None
+        }
 
 
-class IndustrialAsset(Base):
-    __tablename__ = "industrial_assets"
+class FirePrediction(Base):
+    __tablename__ = "fire_predictions"
 
-    id = Column(Integer, primary_key=True, index=True)
-    asset_id = Column(String(64), unique=True, index=True, nullable=False)
-    name = Column(String(255), nullable=False, index=True)
-    category = Column(String(64), nullable=False)  # Refinery, Petrochemical, Power Plant, Steel / Metal, Mining Site, LNG / Gas, etc.
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    fire_detection_id = Column(String(64), ForeignKey("fire_detections.id", ondelete="CASCADE"), nullable=False, index=True)
+    predicted_class = Column(String(64), nullable=False, index=True)
+    confidence = Column(Float, nullable=False)
+    risk_score = Column(Float, nullable=False, index=True)
+    severity = Column(String(16), nullable=False, index=True)  # LOW, MEDIUM, HIGH, CRITICAL
+    model_version = Column(String(32), default="v1.0.0")
+    class_probabilities = Column(Text, nullable=True)  # JSON string
+    nearby_industrial_name = Column(String(128), nullable=True)
+    nearby_industrial_type = Column(String(64), nullable=True)
+    distance_to_industrial_km = Column(Float, nullable=True)
+    nearby_residential_name = Column(String(128), nullable=True)
+    distance_to_residential_km = Column(Float, nullable=True)
+    recommended_response = Column(Text, nullable=True)
+    predicted_at = Column(DateTime, default=utc_now)
+
+    detection = relationship("FireDetection", back_populates="prediction")
+
+    def to_dict(self):
+        probs = {}
+        if self.class_probabilities:
+            try:
+                probs = json.loads(self.class_probabilities)
+            except Exception:
+                probs = {}
+        return {
+            "id": self.id,
+            "fire_detection_id": self.fire_detection_id,
+            "predicted_class": self.predicted_class,
+            "confidence": self.confidence,
+            "risk_score": self.risk_score,
+            "severity": self.severity,
+            "model_version": self.model_version,
+            "class_probabilities": probs,
+            "nearby_industrial_name": self.nearby_industrial_name,
+            "nearby_industrial_type": self.nearby_industrial_type,
+            "distance_to_industrial_km": self.distance_to_industrial_km,
+            "nearby_residential_name": self.nearby_residential_name,
+            "distance_to_residential_km": self.distance_to_residential_km,
+            "recommended_response": self.recommended_response,
+            "predicted_at": self.predicted_at.isoformat() if self.predicted_at else None
+        }
+
+
+class IndustrialSite(Base):
+    __tablename__ = "industrial_sites"
+
+    id = Column(String(64), primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
+    type = Column(String(64), nullable=False, index=True)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    boundary_geojson = Column(Text, nullable=True)  # GeoJSON Polygon / MultiPolygon
-    radius_meters = Column(Float, default=1500.0)  # Context radius
-    operational_status = Column(String(32), default="OPERATIONAL")
-    criticality_level = Column(String(32), default="HIGH")  # CRITICAL, HIGH, MEDIUM, LOW
-    source = Column(String(64), default="OSM-derived")  # 'OSM-derived', 'Prototype registry', 'Demonstration data'
-    source_confidence = Column(String(32), default="HIGH")
-    
-    # Baseline FRP indicators
-    baseline_frp_min = Column(Float, default=20.0)
-    baseline_frp_max = Column(Float, default=80.0)
-    baseline_frp_median = Column(Float, default=45.0)
-    baseline_count = Column(Integer, default=12)
+    source = Column(String(64), default="OpenStreetMap/Overpass")
+    risk_category = Column(String(16), default="HIGH")  # CRITICAL, HIGH, MEDIUM
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
 
-    last_updated = Column(DateTime, default=datetime.utcnow)
-    temporal_observations = relationship("TemporalObservation", back_populates="asset")
+    __table_args__ = (
+        Index("idx_ind_lat_lon", "latitude", "longitude"),
+    )
 
-
-class ClassificationResult(Base):
-    __tablename__ = "classification_results"
-
-    id = Column(Integer, primary_key=True, index=True)
-    anomaly_id = Column(Integer, ForeignKey("thermal_anomalies.id"), nullable=False, unique=True)
-    predicted_class = Column(String(64), nullable=False)
-    confidence_score = Column(Float, nullable=False)  # 0.0 to 1.0
-    class_probabilities = Column(Text, nullable=False)  # JSON dict string
-    supporting_evidence = Column(Text, nullable=False)  # JSON list string
-    uncertainty_factors = Column(Text, nullable=False)  # JSON list string
-    feature_contributions = Column(Text, nullable=True)  # JSON dict string
-    model_name = Column(String(64), default="Hybrid AI + Geospatial Evidence Model")
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    anomaly = relationship("ThermalAnomaly", back_populates="classification")
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "type": self.type,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "source": self.source,
+            "risk_category": self.risk_category,
+            "description": self.description
+        }
 
 
-class TemporalObservation(Base):
-    __tablename__ = "temporal_observations"
+class ResidentialArea(Base):
+    __tablename__ = "residential_areas"
 
-    id = Column(Integer, primary_key=True, index=True)
-    asset_id = Column(Integer, ForeignKey("industrial_assets.id"), nullable=True)
-    anomaly_id = Column(Integer, ForeignKey("thermal_anomalies.id"), nullable=True)
-    cluster_key = Column(String(64), index=True)
+    id = Column(String(64), primary_key=True, index=True)
+    name = Column(String(128), nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    frp = Column(Float, nullable=False)
-    daynight = Column(String(4), default="N")
-    satellite = Column(String(32), default="VIIRS-NOAA21")
-    is_baseline_eligible = Column(Boolean, default=True)
+    building_count = Column(Integer, default=100)
+    population_estimate = Column(Integer, default=1000)
+    source = Column(String(64), default="OpenStreetMap/Census")
+    danger_radius_km = Column(Float, default=3.0)
+    created_at = Column(DateTime, default=utc_now)
 
-    asset = relationship("IndustrialAsset", back_populates="temporal_observations")
-    anomaly = relationship("ThermalAnomaly", back_populates="temporal_observations")
+    __table_args__ = (
+        Index("idx_res_lat_lon", "latitude", "longitude"),
+    )
 
-
-class RiskAssessment(Base):
-    __tablename__ = "risk_assessments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    anomaly_id = Column(Integer, ForeignKey("thermal_anomalies.id"), nullable=False, unique=True)
-    risk_score = Column(Float, nullable=False)  # 0.0 to 100.0
-    risk_level = Column(String(32), nullable=False)  # CRITICAL, HIGH, MEDIUM, LOW
-    investigation_priority = Column(String(32), nullable=False)  # CRITICAL, HIGH, MEDIUM, LOW
-    
-    intensity_component = Column(Float, default=0.0)
-    proximity_component = Column(Float, default=0.0)
-    abnormality_component = Column(Float, default=0.0)
-    persistence_component = Column(Float, default=0.0)
-    criticality_component = Column(Float, default=0.0)
-    confidence_component = Column(Float, default=0.0)
-    formula_weights = Column(Text, nullable=True)  # JSON dict string
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    anomaly = relationship("ThermalAnomaly", back_populates="risk_assessment")
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "building_count": self.building_count,
+            "population_estimate": self.population_estimate,
+            "danger_radius_km": self.danger_radius_km
+        }
 
 
 class Alert(Base):
     __tablename__ = "alerts"
 
-    id = Column(Integer, primary_key=True, index=True)
-    alert_id = Column(String(64), unique=True, index=True, nullable=False)
-    anomaly_id = Column(Integer, ForeignKey("thermal_anomalies.id"), nullable=False)
-    severity = Column(String(32), nullable=False)  # CRITICAL, HIGH, MEDIUM, LOW
-    title = Column(String(255), nullable=False)
+    id = Column(String(64), primary_key=True, index=True)
+    fire_detection_id = Column(String(64), ForeignKey("fire_detections.id", ondelete="CASCADE"), nullable=False, index=True)
+    alert_type = Column(String(64), nullable=False, index=True)
+    severity = Column(String(16), nullable=False, index=True)  # CRITICAL, HIGH, MEDIUM, LOW
+    title = Column(String(128), nullable=False)
     message = Column(Text, nullable=False)
-    facility_name = Column(String(255), default="Unknown Industrial Zone")
-    status = Column(String(32), default="NEW")  # NEW, ACKNOWLEDGED, UNDER_REVIEW, RESOLVED
-    assigned_to = Column(String(128), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    facility_name = Column(String(128), nullable=True)
+    residential_area_name = Column(String(128), nullable=True)
+    distance_to_residence_km = Column(Float, nullable=True)
+    status = Column(String(16), default="NEW", index=True)  # NEW, ACKNOWLEDGED, RESOLVED
+    dedup_key = Column(String(128), unique=True, index=True, nullable=False)
+    acknowledged_by = Column(String(64), nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    resolution_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now, index=True)
 
-    anomaly = relationship("ThermalAnomaly", back_populates="alert")
+    detection = relationship("FireDetection", back_populates="alerts")
 
-
-class Investigation(Base):
-    __tablename__ = "investigations"
-
-    id = Column(Integer, primary_key=True, index=True)
-    anomaly_id = Column(Integer, ForeignKey("thermal_anomalies.id"), nullable=False, unique=True)
-    status = Column(String(32), default="NEW")  # NEW, UNDER REVIEW, VERIFIED, FALSE POSITIVE, RESOLVED
-    assigned_analyst = Column(String(128), default="Unassigned")
-    notes = Column(Text, default="[]")  # JSON list of {id, timestamp, author, text}
-    recommendation = Column(Text, default="Review multi-source evidence and request high-res verification if necessary.")
-    verified_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    anomaly = relationship("ThermalAnomaly", back_populates="investigation")
-
-
-class AuditLog(Base):
-    __tablename__ = "audit_logs"
-
-    id = Column(Integer, primary_key=True, index=True)
-    action = Column(String(64), nullable=False)  # EVENT_OPENED, CLASSIFICATION_VIEWED, STATUS_CHANGED, NOTE_ADDED, REPORT_GENERATED
-    entity_type = Column(String(32), nullable=False)  # ANOMALY, ALERT, INVESTIGATION, SYSTEM
-    entity_id = Column(String(64), nullable=False)
-    user_name = Column(String(128), default="Analyst Demo")
-    details = Column(Text, nullable=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-
-
-class DataSourceStatus(Base):
-    __tablename__ = "data_source_statuses"
-
-    id = Column(Integer, primary_key=True, index=True)
-    source_name = Column(String(64), unique=True, nullable=False)
-    status = Column(String(32), default="CONNECTED")  # CONNECTED, AVAILABLE, OPTIONAL, ACTIVE, DEGRADED, UNAVAILABLE
-    record_count = Column(Integer, default=0)
-    last_sync = Column(DateTime, default=datetime.utcnow)
-    latency_ms = Column(Integer, default=120)
-    message = Column(String(255), default="Operational")
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "fire_detection_id": self.fire_detection_id,
+            "alert_type": self.alert_type,
+            "severity": self.severity,
+            "title": self.title,
+            "message": self.message,
+            "facility_name": self.facility_name,
+            "residential_area_name": self.residential_area_name,
+            "distance_to_residence_km": self.distance_to_residence_km,
+            "status": self.status,
+            "acknowledged_by": self.acknowledged_by,
+            "acknowledged_at": self.acknowledged_at.isoformat() if self.acknowledged_at else None,
+            "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
+            "resolution_notes": self.resolution_notes,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
 
 
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(64), unique=True, index=True, nullable=False)
-    full_name = Column(String(128), nullable=False)
-    role = Column(String(32), default="ANALYST")  # ADMIN, ANALYST, RESPONDER, VIEWER
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(64), nullable=False)
+    email = Column(String(128), unique=True, index=True, nullable=False)
+    role = Column(String(32), default="AUTHORITY", index=True)  # ADMIN, AUTHORITY, ANALYST, PUBLIC
+    hashed_password = Column(String(128), nullable=True)
+    notification_preferences = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+
+class NotificationSubscription(Base):
+    __tablename__ = "notification_subscriptions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_email = Column(String(128), index=True, nullable=False)
+    area_name = Column(String(128), default="Custom Watch Area")
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    radius_km = Column(Float, default=5.0)
+    email_enabled = Column(Boolean, default=True)
+    browser_enabled = Column(Boolean, default=True)
+    sms_enabled = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=utc_now)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "user_email": self.user_email,
+            "area_name": self.area_name,
+            "latitude": self.latitude,
+            "longitude": self.longitude,
+            "radius_km": self.radius_km,
+            "email_enabled": self.email_enabled,
+            "browser_enabled": self.browser_enabled,
+            "sms_enabled": self.sms_enabled,
+            "created_at": self.created_at.isoformat() if self.created_at else None
+        }
+
+
+class SyncLog(Base):
+    __tablename__ = "sync_logs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source = Column(String(64), default="NASA_FIRMS")
+    sync_time = Column(DateTime, default=utc_now, index=True)
+    status = Column(String(32), default="SUCCESS")  # SUCCESS, FAILED, OFFLINE_FALLBACK
+    records_fetched = Column(Integer, default=0)
+    records_inserted = Column(Integer, default=0)
+    duration_seconds = Column(Float, default=0.0)
+    error_message = Column(Text, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "source": self.source,
+            "sync_time": self.sync_time.isoformat() if self.sync_time else None,
+            "status": self.status,
+            "records_fetched": self.records_fetched,
+            "records_inserted": self.records_inserted,
+            "duration_seconds": round(self.duration_seconds, 2),
+            "error_message": self.error_message
+        }
