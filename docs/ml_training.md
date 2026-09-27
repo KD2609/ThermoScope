@@ -1,65 +1,96 @@
 # Machine Learning Model Training & Evaluation Guide
 
-ThermoScope AI uses an ensemble machine learning classification pipeline to categorize satellite thermal anomalies into 6 operational classes:
+ThermoScope AI uses an ensemble machine learning classification pipeline to categorize satellite thermal anomalies into operational classes.
 
-1. **Industrial Fire** (Uncontrolled emergency blazes at refineries, chemical units, or tank farms)
-2. **Gas Flare / Persistent Thermal Source** (Routine operational relief flaring)
-3. **Wildfire / Natural Fire** (Forest fires, shrub fires, and unmanaged natural biomass burning)
-4. **Agricultural Burn** (Post-harvest crop stubble burning)
-5. **Mining / Industrial Thermal Activity** (Blast furnaces, open-cast coal fires, slag dumping)
-6. **Other / Uncertain** (Thermal reflection, ambiguous signatures)
+## 1. Target Classes
 
----
+1. **Industrial Fire**
+2. **Gas Flare / Persistent Thermal Source** 
+3. **Wildfire / Natural Fire**
+4. **Agricultural Burn** (To be added via CREAMS)
+5. **Mining / Industrial Thermal Activity**
+6. **Other / Uncertain**
 
-## 1. Dataset Schema (`data/training_data.csv`)
-
-The model trains from `data/training_data.csv`. You can open and edit this CSV in any spreadsheet tool or text editor to append verified incident records:
-
-| Column | Type | Description |
-|---|---|---|
-| `latitude` | Float | Observation latitude (-90 to +90) |
-| `longitude` | Float | Observation longitude (-180 to +180) |
-| `detection_time` | ISO-8601 | e.g. `2026-09-12T14:30:00Z` |
-| `brightness_temperature` | Float | Kelvin reading (e.g. 330.0 - 500.0) |
-| `frp` | Float | Fire Radiative Power in Megawatts (MW) |
-| `confidence` | Float | FIRMS confidence (0 - 100) |
-| `day_night` | String | 'D' (Day) or 'N' (Night) |
-| `historical_fire_count` | Int | Number of observations at cluster location |
-| `persistence_score` | Float | Recurrence frequency ratio (0.0 to 1.0) |
-| `distance_to_industrial_site` | Float | Distance in kilometers to nearest industrial plant |
-| `industrial_site_type` | String | `refinery`, `steel_plant`, `power_plant`, `petrochemical`, `chemical_facility`, or `none` |
-| `distance_to_residential_area` | Float | Distance in kilometers to nearest settlement |
-| `land_cover` | String | `industrial`, `urban_industrial`, `urban`, `cropland`, `forest`, `barren`, `other` |
-| `fire_cluster_density` | Float | Local cluster concentration (0.0 to 1.0) |
-| `target_class` | String | One of the 6 target classes listed above |
+*Note: Currently, ground truth labels are only verified for Gas Flare (World Bank) and Wildfire (FSI). We DO NOT fabricate labels for the other classes. The model trains only on verified labels to ensure production reliability.*
 
 ---
 
-## 2. Retraining the Model
+## 2. Data Pipeline
 
-To execute the training pipeline, run:
+The pipeline uses `data/raw/firms_archive/2023/firms_2023.csv` as the raw source. 
 
+To execute the training pipeline, run the following steps in sequence from the project root:
+
+### Step 1: Label Matching
+```bash
+python data_prep/match_firm_labels.py
+```
+Matches FIRMS observations to independent data sources (FSI and World Bank Global Gas Flaring).
+- Generates a stable deterministic `observation_id`.
+- Output: `data/labels/jan2023_firms_labels.csv`
+
+### Step 2: Historical Context Features
+```bash
+python ml/historical_features.py
+```
+Generates `historical_fire_count`, `persistence_score`, and `fire_cluster_density`. 
+- **CRITICAL**: Uses a strictly prior time window (`acq_date < current_date`) to prevent future data leakage.
+- Utilizes `sklearn.neighbors.BallTree` for rapid geospatial lookups.
+- Output: `data/processed/historical_features.csv`
+
+### Step 3: Base Feature Extraction
+```bash
+python ml/feature_extractor.py
+```
+Extracts numeric, daytime, and contextual distance features for all observations.
+- Output: `data/processed/firms_features_2023.csv`
+
+### Step 4: Merge Context
+```bash
+python ml/merge_historical_features.py
+```
+Merges the `historical_features.csv` into `firms_features_2023.csv` via the stable `observation_id`.
+
+### Step 5: Build Training Dataset
+```bash
+python data_prep/build_training_dataset.py
+```
+Joins features and verified labels by `observation_id`. Drops unmatched observations to ensure the model is trained *only* on reliable ground truth.
+- Output: `data/processed/training_dataset.csv`
+
+### Step 6: Train Model
 ```bash
 python ml/train.py
 ```
-
-### Execution Steps:
-1. **Validation**: Checks for missing fields and imputes missing numeric values with median/standard baselines.
-2. **Feature Engineering**: Calculates cyclic trigonometric hour features (`hour_sin`, `hour_cos`) and one-hot encodes categorical site types.
-3. **Model Fitting**: Trains a `RandomForestClassifier` with balanced class weights.
-4. **Evaluation**: Evaluates accuracy, macro F1, weighted F1, per-class precision/recall, and builds a confusion matrix.
-5. **Artifact Export**:
-   - Serialized model bundle: `ml/models/fire_classifier_v1.pkl`
-   - Evaluation metrics: `ml/models/metrics.json`
+Trains the `RandomForestClassifier`.
+- Implements an **event-aware** `GroupShuffleSplit` (grouped by rounded location + date) to prevent spatial-temporal leakage between training and testing sets.
+- Output: `ml/models/fire_classifier_v1.pkl` and `ml/models/metrics.json`
 
 ---
 
-## 3. Inspecting Metrics
+## 3. Risk Engine (`ml/risk_engine.py`)
 
-View `ml/models/metrics.json` to inspect:
-- Macro & Weighted F1 scores
-- Confusion matrix
-- Decisive feature rankings
-- Class-wise precision & recall breakdown
+Classification determines *what* the anomaly is, while the **Risk Engine** determines *how dangerous* it is. 
 
-Real-time backend inference automatically loads `ml/models/fire_classifier_v1.pkl` via `ml/predict.py`.
+Risk scores (0-100) are generated post-prediction by assessing:
+- Predicted class and confidence
+- Fire Radiative Power (FRP)
+- Proximity to residential areas
+- Proximity to industrial sites (e.g. Wildfire threatening a refinery)
+- Persistence (A high persistence score indicates routine flaring, reducing acute risk)
+
+---
+
+## 4. How to add CREAMS later
+
+To add agricultural burn labels from CREAMS:
+1. Parse the CREAMS data into a format with coordinates and dates.
+2. In `data_prep/match_firm_labels.py`, add a matching step to find FIRMS records within the CREAMS radius/date.
+3. Assign the label "Agricultural Burn" to matching rows.
+4. Rerun the pipeline! The model will seamlessly integrate the new class.
+
+## 5. Adding more Historical FIRMS data
+
+1. Place the new data in `data/raw/firms_archive/`.
+2. Update the `HISTORICAL_FILE` path in `ml/historical_features.py`.
+3. Update `RAW_FIRMS_FILE` in `ml/feature_extractor.py` and rerun the pipeline.

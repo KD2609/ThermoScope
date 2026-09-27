@@ -1,0 +1,43 @@
+{
+    "training_observation_count": 3471,
+    "test_observation_count": 1114,
+    "class_counts": {
+        "Gas Flare / Persistent Thermal Source": 2598,
+        "Agricultural Burn": 1964,
+        "Wildfire / Natural Fire": 23
+    },
+    "group_counts": {
+        "Agricultural Burn": 1766,
+        "Gas Flare / Persistent Thermal Source": 314,
+        "Wildfire / Natural Fire": 3
+    },
+    "model_configuration": "RandomForestClassifier(n_estimators=100)",
+    "class_weight": "balanced",
+    "feature_list": [
+        "brightness_temperature",
+        "frp",
+        "confidence",
+        "is_night",
+        "hour_sin",
+        "hour_cos",
+        "historical_fire_count",
+        "persistence_score",
+        "distance_to_industrial_site",
+        "distance_to_residential_area",
+        "fire_cluster_density",
+        "ind_type_refinery",
+        "ind_type_steel_plant",
+        "ind_type_power_plant",
+        "ind_type_petrochemical",
+        "ind_type_chemical_facility",
+        "ind_type_none",
+        "land_cover_industrial",
+        "land_cover_urban_industrial",
+        "land_cover_urban",
+        "land_cover_cropland",
+        "land_cover_forest",
+        "land_cover_barren",
+        "land_cover_other"
+    ],
+    "training_timestamp": "2026-09-24 13:04:19.442298"
+}

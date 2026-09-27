@@ -1,145 +1,77 @@
 {
   "model_version": "v1.0.0",
   "algorithm": "RandomForestClassifier",
-  "training_timestamp": "2026-09-17T19:18:00.321192+00:00",
-  "total_samples": 60,
-  "train_samples": 45,
-  "test_samples": 15,
-  "accuracy": 1.0,
-  "macro_f1": 1.0,
-  "weighted_f1": 1.0,
+  "training_timestamp": "2026-09-24T05:59:23.498188+00:00",
+  "total_samples": 447,
+  "train_samples": 324,
+  "test_samples": 123,
+  "accuracy": 0.9756,
+  "macro_f1": 0.9543,
+  "weighted_f1": 0.9748,
   "classes": [
-    "Agricultural Burn",
     "Gas Flare / Persistent Thermal Source",
-    "Industrial Fire",
-    "Mining / Industrial Thermal Activity",
-    "Other / Uncertain",
     "Wildfire / Natural Fire"
   ],
   "classification_report": {
-    "Agricultural Burn": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 2.0
-    },
     "Gas Flare / Persistent Thermal Source": {
-      "precision": 1.0,
+      "precision": 0.9714285714285714,
       "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 3.0
-    },
-    "Industrial Fire": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 4.0
-    },
-    "Mining / Industrial Thermal Activity": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 2.0
-    },
-    "Other / Uncertain": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 1.0
+      "f1-score": 0.9855072463768116,
+      "support": 102.0
     },
     "Wildfire / Natural Fire": {
       "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 3.0
+      "recall": 0.8571428571428571,
+      "f1-score": 0.9230769230769231,
+      "support": 21.0
     },
-    "accuracy": 1.0,
+    "accuracy": 0.975609756097561,
     "macro avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 15.0
+      "precision": 0.9857142857142858,
+      "recall": 0.9285714285714286,
+      "f1-score": 0.9542920847268674,
+      "support": 123.0
     },
     "weighted avg": {
-      "precision": 1.0,
-      "recall": 1.0,
-      "f1-score": 1.0,
-      "support": 15.0
+      "precision": 0.9763066202090592,
+      "recall": 0.975609756097561,
+      "f1-score": 0.9748484106914648,
+      "support": 123.0
     }
   },
   "confusion_matrix": [
     [
-      2,
-      0,
-      0,
-      0,
-      0,
+      102,
       0
     ],
     [
-      0,
       3,
-      0,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      4,
-      0,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      2,
-      0,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      1,
-      0
-    ],
-    [
-      0,
-      0,
-      0,
-      0,
-      0,
-      3
+      18
     ]
   ],
   "top_features": {
-    "brightness_temperature": 0.12524997814018685,
-    "distance_to_industrial_site": 0.10574729719425517,
-    "distance_to_residential_area": 0.09279668805558963,
-    "fire_cluster_density": 0.07784554839644446,
-    "frp": 0.07442095690849156,
-    "hour_sin": 0.07213234597958862,
-    "historical_fire_count": 0.07045757968392008,
-    "persistence_score": 0.07002413203566774,
-    "confidence": 0.0682828571595687,
-    "land_cover_forest": 0.05499443843885461,
-    "land_cover_cropland": 0.03712703086576679,
-    "hour_cos": 0.033495371115753535,
-    "ind_type_none": 0.03152209730850655,
-    "land_cover_urban": 0.03143762806582736,
-    "is_night": 0.012176006288918252,
-    "ind_type_steel_plant": 0.01189072321052151,
-    "ind_type_petrochemical": 0.009775371171564365,
-    "ind_type_refinery": 0.008609656779716453,
-    "ind_type_power_plant": 0.006053529192144428,
-    "land_cover_industrial": 0.00596076400871347,
-    "land_cover_urban_industrial": 1.1206631725707852e-17,
+    "historical_fire_count": 0.19701383251589336,
+    "brightness_temperature": 0.1724646951942519,
+    "fire_cluster_density": 0.1621328879018908,
+    "persistence_score": 0.13129369356411372,
+    "distance_to_residential_area": 0.12692304243959282,
+    "frp": 0.11708557596646907,
+    "distance_to_industrial_site": 0.09308627241778838,
+    "confidence": 0.0,
+    "is_night": 0.0,
+    "hour_sin": 0.0,
+    "hour_cos": 0.0,
+    "ind_type_refinery": 0.0,
+    "ind_type_steel_plant": 0.0,
+    "ind_type_power_plant": 0.0,
+    "ind_type_petrochemical": 0.0,
     "ind_type_chemical_facility": 0.0,
+    "ind_type_none": 0.0,
+    "land_cover_industrial": 0.0,
+    "land_cover_urban_industrial": 0.0,
+    "land_cover_urban": 0.0,
+    "land_cover_cropland": 0.0,
+    "land_cover_forest": 0.0,
     "land_cover_barren": 0.0,
     "land_cover_other": 0.0
   },

@@ -24,7 +24,7 @@ from ml.feature_extractor import extract_features_df, FEATURE_COLUMNS, TARGET_CL
 
 
 def train():
-    data_path = os.path.join(parent_dir, "data", "training_data.csv")
+    data_path = os.path.join(parent_dir, "data", "processed", "training_dataset.csv")
     models_dir = os.path.join(current_dir, "models")
     os.makedirs(models_dir, exist_ok=True)
 
@@ -37,8 +37,8 @@ def train():
 
     # Basic data validation
     required_cols = [
-        "brightness_temperature", "frp", "confidence", "day_night",
-        "distance_to_industrial_site", "target_class"
+        "brightness_temperature", "frp", "confidence",
+        "distance_to_industrial_site", "label"
     ]
     for col in required_cols:
         if col not in df.columns:
@@ -53,24 +53,52 @@ def train():
     df["distance_to_residential_area"] = df["distance_to_residential_area"].fillna(5.0)
 
     # Filter known classes
-    df = df[df["target_class"].isin(TARGET_CLASSES)].reset_index(drop=True)
+    df = df[df["label"].isin(TARGET_CLASSES)].reset_index(drop=True)
     print(f"Valid labeled samples: {len(df)}")
-    print("Class breakdown:\n", df["target_class"].value_counts())
+    print("Class breakdown:\n", df["label"].value_counts())
 
-    X = extract_features_df(df)
-    y = df["target_class"].values
+    if len(df) == 0:
+        print("No valid training samples available. Exiting.")
+        return
 
-    # Train / test split
-    # For small datasets, ensure at least 1 sample per class in test if possible, or use standard stratify
-    try:
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.25, random_state=42, stratify=y
-        )
-    except ValueError:
-        # Fallback if some class has very few samples
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.25, random_state=42
-        )
+    # Extract features using the standardized pipeline
+    # Note: df comes from training_dataset.csv which already has these columns,
+    # but running extract_features_df ensures correct ordering and encoding.
+    X_all = extract_features_df(df)
+    
+    # We must restrict X to only the defined numeric FEATURE_COLUMNS
+    X = X_all[FEATURE_COLUMNS].values
+    y = df["label"].values
+
+    # Event-aware Train/Test Split
+    # Create an event identifier based on day and rounded coordinates (e.g. 0.1 degree ~ 11km)
+    df["lat_rounded"] = df["latitude"].round(1)
+    df["lon_rounded"] = df["longitude"].round(1)
+    # Use 'acq_date' if available, otherwise just group spatially
+    if "acq_date" in df.columns:
+        df["event_id"] = df["lat_rounded"].astype(str) + "_" + df["lon_rounded"].astype(str) + "_" + df["acq_date"].astype(str)
+    else:
+        df["event_id"] = df["lat_rounded"].astype(str) + "_" + df["lon_rounded"].astype(str)
+        
+    events = df["event_id"].unique()
+    
+    from sklearn.model_selection import GroupShuffleSplit
+    
+    if len(events) > 1:
+        gss = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=42)
+        train_idx, test_idx = next(gss.split(X, y, groups=df["event_id"]))
+        X_train, X_test = X[train_idx], X[test_idx]
+        y_train, y_test = y[train_idx], y[test_idx]
+    else:
+        print("Warning: Only 1 unique event found. Using standard train_test_split.")
+        try:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.25, random_state=42, stratify=y
+            )
+        except ValueError:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.25, random_state=42
+            )
 
     print(f"Training set: {len(X_train)} samples. Test set: {len(X_test)} samples.")
 
