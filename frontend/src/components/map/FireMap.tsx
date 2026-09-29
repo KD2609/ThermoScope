@@ -55,15 +55,15 @@ export const FireMap: React.FC<FireMapProps> = ({
       zoom: 5,
       zoomControl: false,
     });
-    const cartoKey = import.meta.env.VITE_CARTO_API_KEY?.trim();
-    const cartoTileUrl = cartoKey
-      ? `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
-      : 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png';
+    
+    const baseTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+      
+      
 
-    // Clean, high-contrast CartoDB Positron base tiles
-    L.tileLayer(cartoTileUrl, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>, NASA FIRMS',
-      subdomains: 'abcd',
+    // OpenStreetMap base tiles
+    L.tileLayer(baseTileUrl, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      
     
     
       
