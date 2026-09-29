@@ -7,8 +7,6 @@ import {
   Bell,
   BarChart3,
   Settings,
-  ShieldCheck,
-  Radio,
   ExternalLink,
   Menu,
   X
@@ -17,8 +15,12 @@ import { api, API_BASE } from '../../services/api';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
+<<<<<<< HEAD
   const [firmsConnected, setFirmsConnected] = useState<boolean>(true);
   const [activeAlertsCount, setActiveAlertsCount] = useState<number>(0);
+=======
+  const [criticalAlertsCount, setCriticalAlertsCount] = useState<number>(0);
+>>>>>>> eabe1ca (Frontend Upadated)
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   const refreshAlertsCount = () => {
@@ -34,8 +36,15 @@ export const Navbar: React.FC = () => {
     refreshAlertsCount();
 
     api.getDashboardStats().then((stats) => {
+<<<<<<< HEAD
       setFirmsConnected(stats.is_live_firms_connected);
     }).catch(() => {});
+=======
+      if (isMounted) {
+        setCriticalAlertsCount(stats.critical_alerts_count);
+      }
+    }).catch(() => { });
+>>>>>>> eabe1ca (Frontend Upadated)
 
     // 1. Listen for local alert state actions (e.g. acknowledge or resolve in AlertsPage)
     const handleLocalAlertUpdate = () => {
@@ -87,16 +96,15 @@ export const Navbar: React.FC = () => {
     { name: 'Alerts', path: '/alerts', icon: Bell, badge: activeAlertsCount },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Awareness', path: '/settings', icon: Settings },
-    { name: 'System', path: '/admin', icon: ShieldCheck },
   ];
 
   const isLanding = location.pathname === '/';
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-geo-200 shadow-subtle">
+    <header className="sticky top-0 z-50 bg-white/95 ">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          
+
           {/* Brand Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center shadow-md shadow-brand-500/20 text-white group-hover:scale-105 transition-transform duration-200">
@@ -109,7 +117,7 @@ export const Navbar: React.FC = () => {
                   GeoAI
                 </span>
               </div>
-              <p className="text-[11px] text-geo-500 font-medium hidden sm:block">Industrial Thermal Intelligence</p>
+              <p className="text-[11px] text-geo-600 font-medium hidden sm:block">Industrial Thermal Intelligence</p>
             </div>
           </Link>
 
@@ -122,13 +130,12 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-geo-100 text-brand-700 font-semibold'
-                      : 'text-geo-600 hover:text-geo-900 hover:bg-geo-50'
-                  }`}
+                  className={`relative flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive
+                      ? 'bg-geo-100/90 text-brand-700 font-semibold shadow-xs'
+                      : 'text-geo-700 hover:text-geo-950 hover:bg-white/60'
+                    }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-brand-600' : 'text-geo-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-brand-600' : 'text-geo-500'}`} />
                   <span>{link.name}</span>
                   {link.badge && link.badge > 0 ? (
                     <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-severity-critical text-white">
@@ -140,14 +147,8 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right Action & Telemetry Pill */}
+          {/* Right Action */}
           <div className="hidden lg:flex items-center gap-4">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-geo-100 border border-geo-200 text-xs text-geo-700 font-medium">
-              <Radio className="w-3.5 h-3.5 text-emerald-500 animate-pulse" />
-              <span>NASA FIRMS</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            </div>
-
             {isLanding && (
               <Link
                 to="/dashboard"
@@ -163,7 +164,7 @@ export const Navbar: React.FC = () => {
           <div className="flex md:hidden items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-geo-600 hover:text-geo-900 hover:bg-geo-100 focus:outline-none"
+              className="p-2 rounded-lg text-geo-700 hover:text-geo-950 hover:bg-white/70 focus:outline-none"
               aria-label="Toggle Menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -175,7 +176,7 @@ export const Navbar: React.FC = () => {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-geo-200 bg-white px-4 pt-2 pb-4 space-y-1 shadow-elevated">
+        <div className="relative z-20 md:hidden border-t border-geo-200 bg-white/95 backdrop-blur-md px-4 pt-2 pb-4 space-y-1 shadow-elevated">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive = location.pathname === link.path;
@@ -184,9 +185,8 @@ export const Navbar: React.FC = () => {
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium ${
-                  isActive ? 'bg-geo-100 text-brand-700 font-semibold' : 'text-geo-700 hover:bg-geo-50'
-                }`}
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium ${isActive ? 'bg-geo-100 text-brand-700 font-semibold' : 'text-geo-700 hover:bg-geo-50'
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon className="w-5 h-5 text-geo-500" />

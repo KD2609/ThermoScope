@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Footer } from '../components/layout/Footer';
 import {
   Search,
   ArrowRight,
@@ -16,7 +17,6 @@ import {
   Layers,
   Flame,
   Radio,
-  ExternalLink,
   Plus,
   Minus,
   Crosshair,
@@ -24,14 +24,16 @@ import {
   Building2,
   X,
   Lock,
-  CheckCircle2,
   ChevronRight,
-  Info
+  Menu,
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
   const [activeNav, setActiveNav] = useState<string>('Home');
   const [isScrolled, setIsScrolled] = useState<boolean>(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [showStoryModal, setShowStoryModal] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
@@ -47,109 +49,123 @@ export const LandingPage: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Logical Navigation Items
   const navItems = [
     { name: 'Home', href: '#home' },
-    { name: 'Live Map', href: '/dashboard', isRoute: true },
+    { name: 'The Challenge', href: '#challenge' },
     { name: 'How It Works', href: '#how-it-works' },
-    { name: 'Impact', href: '#impact' },
-    { name: 'Resources', href: '#challenge' },
-    { name: 'About', href: '#shared-responsibility' },
+    { name: 'Platform Impact', href: '#impact' },
+    { name: 'Live Monitoring', href: '#monitoring' },
+    { name: 'Live Map', href: '/dashboard', isRoute: true },
   ];
 
-  // Stats Strip Items
+  // Concrete Platform Metrics & Scale
   const stats = [
     {
       value: '10K+',
-      label: 'Thermal Detections Monitored',
+      label: 'Thermal Events Monitored',
+      sublabel: 'Continuous global tracking',
       icon: BarChart3,
     },
     {
       value: '500+',
-      label: 'Industrial Sites Mapped',
+      label: 'Industrial Zones Mapped',
+      sublabel: 'Refineries, depots & plants',
       icon: Factory,
     },
     {
-      value: 'Global',
-      label: 'Coverage',
+      value: '375m',
+      label: 'VIIRS Sensor Resolution',
+      sublabel: 'High-precision orbital payload',
       icon: Globe,
     },
     {
-      value: 'AI-Powered',
-      label: 'Risk Analysis',
+      value: '< 15ms',
+      label: 'AI Classification Speed',
+      sublabel: 'Real-time hazard inference',
       icon: Cpu,
     },
     {
-      value: 'Real Impact',
-      label: 'Safer Communities',
-      icon: Users,
+      value: '24/7',
+      label: 'Near Real-Time Telemetry',
+      sublabel: 'NASA FIRMS direct ingestion',
+      icon: Radio,
     },
   ];
 
-  // Challenge Cards
+  // The Challenge Cards
   const challengeCards = [
     {
       id: 1,
-      title: 'Industries at Risk',
-      subtitle: 'Prevent disruptions and reduce risks',
+      title: 'Industrial Facilities at Risk',
+      subtitle: 'Prevent explosive disruptions, refinery flare runaway, and severe capital loss.',
       icon: Factory,
       image: '/images/challenge-industries.jpg',
     },
     {
       id: 2,
       title: 'Ecosystems Under Threat',
-      subtitle: 'Protect forests, wildlife and natural resources',
+      subtitle: 'Protect forests, rivers, and natural habitats adjacent to industrial corridors.',
       icon: TreePine,
       image: '/images/challenge-ecosystems.jpg',
     },
     {
       id: 3,
       title: 'Communities Need Protection',
-      subtitle: 'Support safer, healthier and more resilient cities',
+      subtitle: 'Ensure timely evacuation buffers and air quality safeguarding for nearby populations.',
       icon: Building2,
       image: '/images/challenge-communities.jpg',
     },
     {
       id: 4,
-      title: 'A Healthier Planet',
-      subtitle: 'A more sustainable tomorrow for future generations',
+      title: 'Resilient Infrastructure',
+      subtitle: 'Support proactive containment and regulatory compliance with verified ground truth.',
       icon: Globe,
       image: '/images/challenge-planet.jpg',
     },
   ];
 
-  // How It Works Steps
+  // 5-Stage Technical Workflow
   const workflowSteps = [
     {
       number: '01',
-      title: 'Collect Satellite Data',
-      subtitle: '(NASA FIRMS)',
-      description: 'Detect thermal anomalies in near real-time',
-      tag: 'NASA FIRMS',
-      iconType: 'satellite',
+      title: 'Detect',
+      subtitle: 'NASA Satellite Thermal Signals',
+      description: 'Ingests near real-time VIIRS (375m) and MODIS (1km) orbital thermal anomaly feeds with sensor metadata directly from NASA FIRMS.',
+      tag: 'Raw Telemetry',
+      icon: Radio,
     },
     {
       number: '02',
-      title: 'Analyze with AI',
-      subtitle: 'Classify & Contextualize',
-      description: 'Classify, assess risk and enrich with geospatial context',
-      tag: 'Machine Learning',
-      iconType: 'layers',
+      title: 'Contextualize',
+      subtitle: 'Geospatial Infrastructure + Buffers',
+      description: 'Cross-references thermal coordinates with industrial boundaries, petrochemical plants, and residential buffer zones using PostGIS & OSM.',
+      tag: 'Spatial Topology',
+      icon: Layers,
     },
     {
       number: '03',
-      title: 'Generate Insights',
-      subtitle: 'Spatial Intelligence',
-      description: 'Identify high-risk areas and potential impact',
-      tag: 'Risk Scoring',
-      iconType: 'network',
+      title: 'Classify',
+      subtitle: 'Machine Learning Hazard Classifier',
+      description: 'Distinguishes routine operational gas flaring from uncontained industrial fire emergencies in under 15ms using calibrated ML models.',
+      tag: 'Machine Learning',
+      icon: Cpu,
     },
     {
       number: '04',
-      title: 'Enable Action',
-      subtitle: 'Authority & Public Alerts',
-      description: 'Support authorities, industries and communities with timely alerts',
-      tag: 'Early Warning',
-      iconType: 'responders',
+      title: 'Assess',
+      subtitle: 'Risk & Anomaly Severity Analysis',
+      description: 'Quantifies Fire Radiative Power (FRP), brightness temperature trends, and proximity risks to trigger targeted severity alerts.',
+      tag: 'Risk Analytics',
+      icon: Shield,
+    },
+    {
+      number: '05',
+      title: 'Investigate',
+      subtitle: 'Interactive Map + Dossier Intelligence',
+      description: 'Equips plant safety teams and emergency responders with live interactive maps, audit trails, and comprehensive incident dossiers.',
+      tag: 'Incident Response',
+      icon: Crosshair,
     },
   ];
 
@@ -159,301 +175,370 @@ export const LandingPage: React.FC = () => {
       {/* ==================================================== */}
       {/* 1. NAVBAR                                            */}
       {/* ==================================================== */}
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className={`sticky top-0 z-50 transition-all duration-300 ${
-          isScrolled
-            ? 'bg-white/95 backdrop-blur-md shadow-sm border-b border-slate-200/80 py-3'
-            : 'bg-white/90 backdrop-blur-sm border-b border-slate-100 py-4 sm:py-5'
-        }`}
+      {/* ==================================================== */}
+      {/* HERO SECTION — CINEMATIC SATELLITE INTELLIGENCE      */}
+      {/* ==================================================== */}
+      <section 
+        className="relative min-h-screen flex flex-col justify-between bg-cover bg-center bg-no-repeat overflow-hidden"
+        style={{
+          backgroundImage: `linear-gradient(rgba(5, 20, 45, 0.25), rgba(5, 20, 45, 0.25)), url('/images/hero-satellite-industrial.png')`,
+        }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            
-            {/* Left: Brand Logo & Subtitle */}
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="relative flex items-center justify-center w-10 h-10 rounded-full border border-blue-600/30 bg-blue-50/60 text-blue-700 shadow-sm transition-transform duration-200 group-hover:scale-105">
-                <svg className="w-5 h-5 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                  <path d="M2 12h20" />
-                </svg>
-                {/* Crosshair ring subtle effect */}
-                <div className="absolute inset-0 rounded-full border border-dashed border-blue-400/40 animate-[spin_20s_linear_infinite]" />
-              </div>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xl font-bold tracking-tight text-slate-950 font-sans">TerraGuard</span>
-                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-200/60">
-                    GeoAI
+        {/* 1. NAVBAR — Sits above hero background with subtle translucency */}
+        <header className="relative z-30 w-full border-b border-white/10 bg-slate-950/20 backdrop-blur-[2px] select-none">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-[76px]">
+              
+              {/* Brand Logo & Identity */}
+              <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/30 group-hover:scale-105 transition-transform duration-200">
+                  <Flame className="w-5 h-5 text-amber-300 fill-amber-300" />
+                </div>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-bold text-lg sm:text-xl text-white tracking-tight font-sans leading-none">
+                      ThermoScope
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/25 text-blue-200 border border-blue-400/30 leading-none">
+                      GEOAI
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-slate-200 font-medium hidden sm:block leading-tight mt-0.5">
+                    Industrial Thermal Intelligence
                   </span>
                 </div>
-                <span className="text-[11px] font-medium text-slate-500 tracking-wide">Observe &bull; Understand &bull; Protect</span>
+              </Link>
+
+              {/* Desktop Navigation Links */}
+              <nav className="hidden lg:flex items-center space-x-6 xl:space-x-7 text-[13px] font-medium text-slate-200">
+                {navItems.map((item) => {
+                  const isActive = activeNav === item.name;
+                  return item.isRoute ? (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setActiveNav(item.name)}
+                      className={`py-1 transition-colors hover:text-white ${
+                        isActive ? 'text-sky-400 font-semibold' : ''
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  ) : (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setActiveNav(item.name)}
+                      className={`py-1 transition-colors hover:text-white ${
+                        isActive ? 'text-sky-400 font-semibold' : ''
+                      }`}
+                    >
+                      {item.name}
+                    </a>
+                  );
+                })}
+              </nav>
+
+              {/* Right: Search, Sign In, Live Map button, Mobile Toggle */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <button
+                  onClick={() => setShowSearchModal(true)}
+                  aria-label="Search thermal incidents"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
+                  title="Search incidents & coordinates"
+                >
+                  <Search className="w-4 h-4" />
+                </button>
+
+                <button
+                  onClick={() => setShowLoginModal(true)}
+                  className="hidden sm:inline-flex px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-200 hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                >
+                  Sign In
+                </button>
+
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-md shadow-blue-600/30 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] shrink-0"
+                >
+                  <span>Live Map</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+
+                <button
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  aria-label="Toggle Navigation Menu"
+                  className="lg:hidden p-2 rounded-lg text-slate-200 hover:text-white hover:bg-white/10 focus:outline-none shrink-0"
+                >
+                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                </button>
               </div>
-            </Link>
 
-            {/* Center: Navigation Links */}
-            <nav className="hidden md:flex items-center space-x-7 lg:space-x-8 text-[14px] font-medium text-slate-600">
-              {navItems.map((item) => {
-                const isActive = activeNav === item.name;
-                return item.isRoute ? (
+            </div>
+          </div>
+
+          {/* Mobile Navigation Drawer */}
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="relative z-50 lg:hidden border-t border-white/10 bg-slate-950/95 backdrop-blur-md px-4 pt-3 pb-5 space-y-1 shadow-2xl"
+              >
+                {navItems.map((item) => {
+                  return item.isRoute ? (
+                    <Link
+                      key={item.name}
+                      to={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  ) : (
+                    <a
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-3 py-2 rounded-lg text-sm font-medium text-slate-200 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      {item.name}
+                    </a>
+                  );
+                })}
+
+                <div className="pt-3 mt-2 border-t border-white/10 flex items-center justify-between">
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowLoginModal(true);
+                    }}
+                    className="text-xs font-semibold text-slate-300 hover:text-white py-1.5"
+                  >
+                    Enterprise Sign In
+                  </button>
                   <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setActiveNav(item.name)}
-                    className={`relative py-1 transition-colors hover:text-slate-950 ${
-                      isActive ? 'text-blue-700 font-semibold' : ''
-                    }`}
+                    to="/dashboard"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-lg shadow-sm"
                   >
-                    {item.name}
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeNavIndicator"
-                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full"
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                      />
-                    )}
+                    <span>Launch Live Map</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
-                ) : (
-                  <a
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setActiveNav(item.name)}
-                    className={`relative py-1 transition-colors hover:text-slate-950 ${
-                      isActive ? 'text-blue-700 font-semibold' : ''
-                    }`}
-                  >
-                    {item.name}
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeNavIndicator"
-                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-600 rounded-full"
-                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </a>
-                );
-              })}
-            </nav>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </header>
 
-            {/* Right: Search, Login, Get Started */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                onClick={() => setShowSearchModal(true)}
-                aria-label="Search thermal incidents"
-                className="w-9 h-9 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-              >
-                <Search className="w-4 h-4" />
-              </button>
+        {/* 2. HERO CONTENT — Positioned toward LEFT side, Satellite + Globe visible on RIGHT */}
+        <div className="relative z-10 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-12 sm:py-20 lg:py-24 flex-1 flex flex-col justify-center">
+          <div className="max-w-2xl text-left">
+            
+            {/* Small Badge */}
+            <div className="inline-flex items-center mb-4 sm:mb-6">
+              <span className="text-[11px] sm:text-xs font-bold tracking-wider text-sky-200 uppercase bg-slate-950/40 border border-white/20 px-3.5 py-1.5 rounded-full shadow-sm">
+                SATELLITE INTELLIGENCE &bull; EARLY WARNING
+              </span>
+            </div>
 
-              <button
-                onClick={() => setShowLoginModal(true)}
-                className="px-3.5 py-1.5 text-[13px] font-medium text-slate-700 hover:text-slate-950 transition-colors rounded-lg hover:bg-slate-50"
-              >
-                Login
-              </button>
+            {/* Main Heading */}
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl xl:text-[3.75rem] font-bold tracking-tight text-white leading-[1.15] sm:leading-[1.12] mb-4 sm:mb-6 max-w-[700px]">
+              Satellite Intelligence for<br />
+              <span className="text-sky-400">
+                Industrial Thermal Safety
+              </span>
+            </h1>
 
+            {/* Description */}
+            <p className="text-sm sm:text-lg lg:text-xl text-slate-100 leading-relaxed max-w-[650px] mb-6 sm:mb-10 font-normal">
+              ThermoScope combines satellite thermal data, geospatial intelligence and AI to detect industrial thermal anomalies before they become critical.
+            </p>
+
+            {/* Two Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <Link
                 to="/dashboard"
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg shadow-sm transition-all duration-200 hover:shadow hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-600/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-center"
               >
-                <span>Get Started</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                <span>Explore Live Map &rarr;</span>
               </Link>
+
+              <a
+                href="#how-it-works"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const target = document.getElementById('how-it-works');
+                  if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl text-sm sm:text-base font-semibold text-white bg-slate-900/60 hover:bg-slate-900/80 border border-white/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 text-center"
+              >
+                <span>See How It Works</span>
+              </a>
             </div>
 
           </div>
         </div>
-      </motion.header>
+
+        {/* Bottom breathing space so landscape is visible */}
+        <div className="h-8 sm:h-12" aria-hidden="true" />
+      </section>
 
       {/* ==================================================== */}
-      {/* 2. HERO SECTION                                      */}
+      {/* 3. THE CHALLENGE                                     */}
       {/* ==================================================== */}
-      <section className="relative pt-6 pb-16 md:pt-10 md:pb-24 overflow-hidden border-b border-slate-100">
-        
-        {/* Background Subtle Grid Texture */}
-        <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:32px_32px] opacity-30 pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-            
-            {/* Left Content */}
-            <motion.div
-              initial={{ opacity: 0, y: 25 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 z-10"
-            >
-              {/* Eyebrow */}
-              <div className="mb-4">
-                <span className="text-[11px] sm:text-xs font-semibold tracking-widest text-slate-500 uppercase">
-                  SATELLITE INTELLIGENCE FOR A SAFER TOMORROW
-                </span>
-              </div>
-
-              {/* Large Headline */}
-              <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-bold tracking-tight text-slate-900 leading-[1.12] mb-6">
-                Turning<br />
-                Satellite Signals<br />
-                into <span className="text-[#1D70B8]">a Safer Tomorrow</span>
-              </h1>
-
-              {/* Explanation text */}
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-xl mb-8">
-                We combine NASA satellite data, geospatial intelligence and AI to detect, classify and monitor industrial fires and thermal risks — helping protect industries, communities and the planet.
+      <section id="challenge" className="py-16 sm:py-20 lg:py-24 bg-white border-b border-slate-100 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          
+          {/* Top Split Concept Banner */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start mb-12 sm:mb-16">
+            <div className="lg:col-span-5">
+              <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase block mb-3 font-mono">
+                THE CHALLENGE
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 leading-tight">
+                Thermal anomalies are signals.<br />
+                <span className="text-blue-600">Context turns them into intelligence.</span>
+              </h2>
+            </div>
+            <div className="lg:col-span-7">
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-4">
+                Raw orbital thermal readings only indicate heat on the Earth's surface. Without spatial context, emergency responders cannot tell a controlled petrochemical flare stack from a catastrophic tank farm blaze.
               </p>
+              <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+                ThermoScope fuses NASA orbital sensors with industrial site boundaries, residential buffer corridors, and real-time machine learning inference to deliver verified situational awareness before an anomaly escalates.
+              </p>
+            </div>
+          </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-10">
-                <Link
-                  to="/dashboard"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 transition-all duration-200 shadow-sm hover:shadow hover:scale-[1.02] active:scale-[0.98]"
+          {/* 4 Image Panels (Tightly Balanced Heights) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {challengeCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div
+                  key={card.id}
+                  className="group relative h-64 sm:h-72 lg:h-80 rounded-xl overflow-hidden shadow-sm border border-slate-200 hover:shadow-md transition-all duration-300 transform hover:-translate-y-1"
                 >
-                  <span>Explore Live Map</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-
-                <button
-                  onClick={() => setShowStoryModal(true)}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 transition-colors shadow-sm"
-                >
-                  <Play className="w-3.5 h-3.5 text-blue-600 fill-blue-600" />
-                  <span>Watch Our Story</span>
-                </button>
-              </div>
-
-              {/* 4 Feature Indicator Pills */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 border-t border-slate-200/80 text-xs text-slate-600">
-                <div className="flex items-center gap-2">
-                  <Leaf className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-medium text-slate-700">Safer Communities</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Factory className="w-4 h-4 text-slate-600 shrink-0" />
-                  <span className="font-medium text-slate-700">More Resilient Industries</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Sprout className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="font-medium text-slate-700">Healthier Ecosystems</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-blue-600 shrink-0" />
-                  <span className="font-medium text-slate-700">A Safer Tomorrow</span>
-                </div>
-              </div>
-
-            </motion.div>
-
-            {/* Right Visual: Satellite & Earth Landscape Artwork */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.9, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-              className="lg:col-span-6 relative w-full"
-            >
-              <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl border border-slate-200/90 bg-white">
-                
-                {/* Main Hero Composite Image */}
-                <div className="relative aspect-[16/10] sm:aspect-[16/9] lg:aspect-[4/3] w-full overflow-hidden">
+                  {/* Background Image */}
                   <img
-                    src="/images/hero-industrial-satellite.png"
-                    alt="Satellite monitoring industrial facility with thermal anomaly detection"
-                    className="w-full h-full object-cover object-center transform hover:scale-[1.02] transition-transform duration-700 ease-out"
-                    loading="eager"
+                    src={card.image}
+                    alt={card.title}
+                    className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
+                    loading="lazy"
                   />
 
-                  {/* Gentle left & bottom gradient mask blending into white background */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-transparent pointer-events-none" />
+                  {/* Dark Gradient Overlay for Crisp Legibility */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent" />
 
-                  {/* Satellite Floating Badge */}
-                  <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.6, duration: 0.6 }}
-                    className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm text-right pointer-events-none"
-                  >
-                    <div className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">TELEMETRY</div>
-                    <div className="text-xs font-bold text-slate-800">From Space to a Safer Earth</div>
-                  </motion.div>
-
-                  {/* Pulsing Thermal Anomaly Beacon on the Refinery */}
-                  <div className="absolute top-[58%] right-[28%] -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div className="relative flex items-center justify-center">
-                      {/* Ripple 1 */}
-                      <div className="absolute w-12 h-12 rounded-full bg-red-500/30 animate-thermal-ripple" />
-                      {/* Ripple 2 */}
-                      <div className="absolute w-7 h-7 rounded-full bg-orange-500/50 animate-ping" />
-                      {/* Center Point */}
-                      <div className="w-3.5 h-3.5 rounded-full bg-red-600 border-2 border-white shadow-md shadow-red-500/50" />
+                  {/* Bottom Content Card */}
+                  <div className="absolute inset-x-0 bottom-0 p-4 flex flex-col justify-end text-white z-10">
+                    <div className="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center mb-2.5 border border-white/30 text-white">
+                      <Icon className="w-3.5 h-3.5" />
                     </div>
+                    <h3 className="text-sm sm:text-base font-bold text-white mb-1 leading-snug">
+                      {card.title}
+                    </h3>
+                    <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
+                      {card.subtitle}
+                    </p>
                   </div>
-
-                  {/* Pinned Industrial Thermal Anomaly Floating Callout Card */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ delay: 0.8, duration: 0.5, ease: 'easeOut' }}
-                    className="absolute top-[28%] right-[6%] sm:right-[10%] z-30 max-w-[210px] sm:max-w-[230px] bg-white/95 backdrop-blur-md rounded-xl p-3 border border-slate-200 shadow-xl"
-                  >
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-                      <span className="text-[11px] font-bold text-slate-900 leading-tight">Industrial Thermal Anomaly</span>
-                    </div>
-
-                    <div className="space-y-0.5 text-[10px] font-mono text-slate-600 mb-2">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Lat:</span>
-                        <span className="font-semibold text-slate-800">28.6139° N</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Lon:</span>
-                        <span className="font-semibold text-slate-800">77.2090° E</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Confidence:</span>
-                        <span className="font-bold text-emerald-600">92% High</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Source:</span>
-                        <span className="text-slate-700">NASA FIRMS (VIIRS)</span>
-                      </div>
-                    </div>
-
-                    <Link
-                      to="/dashboard"
-                      className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
-                    >
-                      <span>Investigate in Map</span>
-                      <ChevronRight className="w-3 h-3" />
-                    </Link>
-                  </motion.div>
-
                 </div>
-              </div>
-            </motion.div>
-
+              );
+            })}
           </div>
+
         </div>
       </section>
 
       {/* ==================================================== */}
-      {/* 3. STATS / IMPACT STRIP                              */}
+      {/* 4. HOW IT WORKS (CONNECTED 5-STAGE PIPELINE)         */}
       {/* ==================================================== */}
-      <section id="impact" className="relative py-10 bg-slate-50/70 border-b border-slate-200/80">
+      <section id="how-it-works" className="py-16 sm:py-20 lg:py-24 bg-slate-50/60 border-b border-slate-200/80 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-6 md:gap-4 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+          
+          {/* Section Header */}
+          <div className="max-w-3xl mb-12">
+            <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase block mb-2 font-mono">
+              HOW IT WORKS
+            </span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 leading-tight mb-3">
+              Connected Pipeline: From Orbit to Ground Truth
+            </h2>
+            <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
+              ThermoScope automates the complete lifecycle of thermal anomaly detection across five structured stages — delivering verifiable intelligence within seconds of satellite telemetry availability.
+            </p>
+          </div>
+
+          {/* 5-Stage Connected Workflow Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 sm:gap-4 relative">
+            {workflowSteps.map((step) => {
+              const StepIcon = step.icon;
+              return (
+                <div
+                  key={step.number}
+                  className="bg-white rounded-xl p-4 sm:p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition-all flex flex-col justify-between h-full relative group"
+                >
+                  <div>
+                    {/* Step Number & Graphic Container */}
+                    <div className="h-16 rounded-lg bg-blue-50/60 border border-blue-100/60 flex items-center justify-between px-3.5 mb-3.5 relative">
+                      <span className="text-xs font-mono font-bold text-blue-700">
+                        STAGE {step.number}
+                      </span>
+                      <StepIcon className="w-5 h-5 text-blue-600" />
+                    </div>
+
+                    {/* Step Title & Details */}
+                    <h3 className="text-sm font-bold text-slate-900 mb-1 leading-snug">
+                      {step.title}
+                    </h3>
+                    <p className="text-[11px] font-semibold text-blue-700 mb-1.5">
+                      {step.subtitle}
+                    </p>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {step.description}
+                    </p>
+                  </div>
+
+                  {/* Stage Tag Footer */}
+                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                    <span className="font-semibold text-slate-700">{step.tag}</span>
+                    <span className="text-emerald-600 font-mono font-bold text-[10px]">VERIFIED</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Bottom Workflow Action */}
+          <div className="mt-10 text-center">
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-colors"
+            >
+              <span>Explore Live Telemetry Workflow</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ==================================================== */}
+      {/* 5. PLATFORM IMPACT & METRICS STRIP                   */}
+      {/* ==================================================== */}
+      <section id="impact" className="py-12 sm:py-14 bg-white border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6 sm:gap-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-200">
             {stats.map((stat, idx) => {
               const Icon = stat.icon;
               return (
-                <motion.div
+                <div
                   key={stat.label}
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-50px' }}
-                  transition={{ duration: 0.5, delay: idx * 0.1 }}
-                  className={`flex items-center gap-3.5 ${idx > 0 ? 'pt-4 md:pt-0 md:pl-6' : ''}`}
+                  className={`flex items-center gap-3.5 ${idx > 0 ? 'pt-4 sm:pt-0 sm:pl-4 lg:pl-6' : ''}`}
                 >
                   <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shrink-0">
                     <Icon className="w-5 h-5" />
@@ -462,11 +547,14 @@ export const LandingPage: React.FC = () => {
                     <div className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
                       {stat.value}
                     </div>
-                    <div className="text-xs text-slate-500 font-medium leading-tight">
+                    <div className="text-xs text-slate-700 font-semibold leading-tight mt-0.5">
                       {stat.label}
                     </div>
+                    <div className="text-[10px] text-slate-400 font-medium leading-tight">
+                      {stat.sublabel}
+                    </div>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>
@@ -474,311 +562,112 @@ export const LandingPage: React.FC = () => {
       </section>
 
       {/* ==================================================== */}
-      {/* 4. THE CHALLENGE                                     */}
+      {/* 6. LIVE GLOBAL MONITORING (PRODUCT PREVIEW)          */}
       {/* ==================================================== */}
-      <section id="challenge" className="py-20 md:py-28 bg-white border-b border-slate-100 overflow-hidden">
+      <section id="monitoring" className="py-16 sm:py-20 lg:py-24 bg-white border-b border-slate-100 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             
-            {/* Left Column: Copy */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.6 }}
-              className="lg:col-span-4"
-            >
-              <span className="text-xs font-semibold tracking-widest text-slate-500 uppercase block mb-3">
-                THE CHALLENGE
+            {/* Left Column: Context & Capabilities */}
+            <div className="lg:col-span-4">
+              <span className="text-xs font-semibold tracking-wider text-blue-600 uppercase block mb-2 sm:mb-3">
+                LIVE MONITORING INTERFACE
               </span>
 
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight mb-5">
-                Industrial Fires<br />
-                A Growing Global Risk.
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-slate-900 leading-tight mb-4 sm:mb-5">
+                Interactive Thermal Hotspots &amp; Risk Telemetry
               </h2>
 
               <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6">
-                Undetected industrial fires and persistent thermal sources can harm people, damage ecosystems and disrupt economies. Early detection and accurate insights are critical for a safer, more resilient future.
+                Explore real-time thermal detections, industrial site polygons, and danger buffer zones directly on an interactive global map. Filter by risk tier, inspect raw sensor metrics, and track telemetry logs.
               </p>
 
-              <button
-                onClick={() => {
-                  const elem = document.getElementById('how-it-works');
-                  elem?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-800 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition-colors"
-              >
-                <span>Learn More</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </motion.div>
-
-            {/* Right Column: 4 Image Panels */}
-            <div className="lg:col-span-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {challengeCards.map((card, idx) => {
-                  const Icon = card.icon;
-                  return (
-                    <motion.div
-                      key={card.id}
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true, margin: '-60px' }}
-                      transition={{ duration: 0.6, delay: idx * 0.12 }}
-                      className="group relative h-80 sm:h-96 rounded-xl overflow-hidden shadow-md border border-slate-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
-                    >
-                      {/* Background Image */}
-                      <img
-                        src={card.image}
-                        alt={card.title}
-                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
-                        loading="lazy"
-                      />
-
-                      {/* Dark Gradient Overlay for Crisp Text Contrast */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
-
-                      {/* Bottom Info Content */}
-                      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 flex flex-col justify-end text-white z-10">
-                        <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur-md flex items-center justify-center mb-3 border border-white/30 text-white">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <h3 className="text-base font-bold text-white mb-1.5 leading-snug">
-                          {card.title}
-                        </h3>
-                        <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">
-                          {card.subtitle}
-                        </p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ==================================================== */}
-      {/* 5. HOW IT WORKS                                      */}
-      {/* ==================================================== */}
-      <section id="how-it-works" className="py-20 md:py-28 bg-slate-50/50 border-b border-slate-200/80 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-start">
-            
-            {/* Left Column */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.6 }}
-              className="lg:col-span-4"
-            >
-              <span className="text-xs font-semibold tracking-widest text-slate-500 uppercase block mb-3">
-                HOW IT WORKS
-              </span>
-
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight mb-5">
-                From Raw Data<br />
-                to Real-World Impact.
-              </h2>
-
-              <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6">
-                We transform real-time satellite data into actionable insights using AI and geospatial analysis — enabling faster response, better planning and greater safety.
-              </p>
-
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-colors"
-              >
-                <span>See How It Works</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </motion.div>
-
-            {/* Right Column: 4-Stage Horizontal Flow */}
-            <div className="lg:col-span-8">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
-                {workflowSteps.map((step, idx) => (
-                  <motion.div
-                    key={step.number}
-                    initial={{ opacity: 0, y: 25 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: '-60px' }}
-                    transition={{ duration: 0.5, delay: idx * 0.15 }}
-                    className="relative bg-white rounded-xl p-5 border border-slate-200/90 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
-                  >
-                    {/* Top Step Graphic / Icon Box */}
-                    <div className="h-28 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center p-3 mb-4 relative overflow-hidden">
-                      
-                      {step.iconType === 'satellite' && (
-                        <div className="flex flex-col items-center">
-                          <Radio className="w-8 h-8 text-blue-600 animate-pulse" />
-                          <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Telemetry Ingest</span>
-                        </div>
-                      )}
-
-                      {step.iconType === 'layers' && (
-                        <div className="flex flex-col items-center">
-                          <Layers className="w-8 h-8 text-indigo-600" />
-                          <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Spatial Fusion</span>
-                        </div>
-                      )}
-
-                      {step.iconType === 'network' && (
-                        <div className="flex flex-col items-center">
-                          <Cpu className="w-8 h-8 text-blue-700" />
-                          <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">ML Assessment</span>
-                        </div>
-                      )}
-
-                      {step.iconType === 'responders' && (
-                        <div className="flex flex-col items-center">
-                          <Users className="w-8 h-8 text-emerald-600" />
-                          <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Response Alert</span>
-                        </div>
-                      )}
-
-                      <span className="absolute top-2 left-2 text-[10px] font-mono font-bold text-slate-400">
-                        {step.number}
-                      </span>
-                    </div>
-
-                    {/* Step Title & Details */}
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 mb-1 leading-snug">
-                        {step.number} {step.title}
-                      </h4>
-                      <p className="text-[11px] font-medium text-blue-700 mb-2">
-                        {step.subtitle}
-                      </p>
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {step.description}
-                      </p>
-                    </div>
-
-                    {/* Stage indicator pill */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                      <span className="font-semibold text-slate-700">{step.tag}</span>
-                      {idx < workflowSteps.length - 1 && (
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-400 hidden lg:block" />
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </section>
-
-      {/* ==================================================== */}
-      {/* 6. LIVE GLOBAL MONITORING                            */}
-      {/* ==================================================== */}
-      <section id="monitoring" className="py-20 md:py-28 bg-white border-b border-slate-100 overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
-            
-            {/* Left Column */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.6 }}
-              className="lg:col-span-4"
-            >
-              <span className="text-xs font-semibold tracking-widest text-slate-500 uppercase block mb-3">
-                LIVE GLOBAL MONITORING
-              </span>
-
-              <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 leading-tight mb-5">
-                See What's Happening<br />
-                Around the World.
-              </h2>
-
-              <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-6">
-                Explore real-time thermal detections, industrial sites and high-risk areas on an interactive global map. Zoom into regions, view incident details and understand the broader context.
-              </p>
-
-              <Link
-                to="/dashboard"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-colors mb-8"
-              >
-                <span>View Live Map</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-
-              {/* Decorative Badge */}
-              <div className="flex items-center gap-3 pt-6 border-t border-slate-200/80 text-slate-500">
-                <Globe className="w-6 h-6 text-slate-400 stroke-1" />
-                <div className="text-[11px] font-mono tracking-wider uppercase leading-tight">
-                  REAL DATA<br />
-                  REAL PLACES<br />
-                  REAL CHANGE.
+              <div className="space-y-3 mb-8">
+                <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Interactive geospatial layers with Leaflet &amp; OpenStreetMap</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Real-time polygon containment calculation</span>
+                </div>
+                <div className="flex items-center gap-2.5 text-xs text-slate-700 font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Detailed incident audit logs and sensor timestamps</span>
                 </div>
               </div>
-            </motion.div>
 
-            {/* Right Column: Dark Geospatial Map Preview */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: '-80px' }}
-              transition={{ duration: 0.7 }}
-              className="lg:col-span-8 relative"
-            >
-              <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-800 bg-[#090d16] aspect-[16/10] w-full">
+              <Link
+                to="/dashboard"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-xs sm:text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-colors"
+              >
+                <span>Launch Full-Screen Map</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {/* Right Column: Geospatial Map Preview Container */}
+            <div className="lg:col-span-8 relative">
+              <div className="relative rounded-2xl overflow-hidden shadow-xl border border-slate-800 bg-[#090d16] aspect-[16/10] w-full">
                 
                 {/* World Night Thermal Map */}
                 <img
                   src="/images/map-world-dark.jpg"
-                  alt="Live Global Thermal Monitoring Map"
-                  className="w-full h-full object-cover object-center opacity-90"
-                  style={{ transform: `scale(${mapZoomLevel})`, transition: 'transform 0.4s ease-out' }}
+                  alt="Live Global Thermal Monitoring Map Preview"
+                  className="w-full h-full object-cover object-center opacity-90 transition-transform duration-300 ease-out"
+                  style={{ transform: `scale(${mapZoomLevel})` }}
                 />
 
-                {/* Map Grid Scanlines / Vignette */}
+                {/* Map Grid Vignette Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-slate-950/40 pointer-events-none" />
 
-                {/* Top-Left Legend Pill */}
-                <div className="absolute top-4 left-4 bg-slate-900/90 backdrop-blur-md rounded-xl p-3 border border-slate-700/60 shadow-lg text-white">
-                  <div className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-2">HOTSPOT CLASSIFICATION</div>
+                {/* Top-Left Legend Filter Pill */}
+                <div className="absolute top-3.5 left-3.5 sm:top-4 sm:left-4 bg-slate-900/90 backdrop-blur-md rounded-xl p-3 border border-slate-700/60 shadow-lg text-white">
+                  <div className="text-[10px] font-bold text-slate-400 tracking-wider uppercase mb-2 font-mono">
+                    HOTSPOT CLASSIFICATION
+                  </div>
                   <div className="space-y-1.5 text-xs">
                     <button
                       onClick={() => setSelectedLegendFilter(selectedLegendFilter === 'fire' ? null : 'fire')}
-                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${selectedLegendFilter && selectedLegendFilter !== 'fire' ? 'opacity-40' : 'opacity-100'}`}
+                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${
+                        selectedLegendFilter && selectedLegendFilter !== 'fire' ? 'opacity-40' : 'opacity-100'
+                      }`}
                     >
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
                       <span className="font-medium text-slate-200">Active Fire</span>
                     </button>
                     <button
                       onClick={() => setSelectedLegendFilter(selectedLegendFilter === 'industrial' ? null : 'industrial')}
-                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${selectedLegendFilter && selectedLegendFilter !== 'industrial' ? 'opacity-40' : 'opacity-100'}`}
+                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${
+                        selectedLegendFilter && selectedLegendFilter !== 'industrial' ? 'opacity-40' : 'opacity-100'
+                      }`}
                     >
                       <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                      <span className="font-medium text-slate-200">Industrial Site</span>
+                      <span className="font-medium text-slate-200">Industrial Flare</span>
                     </button>
                     <button
                       onClick={() => setSelectedLegendFilter(selectedLegendFilter === 'risk' ? null : 'risk')}
-                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${selectedLegendFilter && selectedLegendFilter !== 'risk' ? 'opacity-40' : 'opacity-100'}`}
+                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${
+                        selectedLegendFilter && selectedLegendFilter !== 'risk' ? 'opacity-40' : 'opacity-100'
+                      }`}
                     >
                       <span className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                      <span className="font-medium text-slate-200">High Risk Area</span>
+                      <span className="font-medium text-slate-200">High Risk Buffer</span>
                     </button>
                     <button
                       onClick={() => setSelectedLegendFilter(selectedLegendFilter === 'recent' ? null : 'recent')}
-                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${selectedLegendFilter && selectedLegendFilter !== 'recent' ? 'opacity-40' : 'opacity-100'}`}
+                      className={`flex items-center gap-2 hover:opacity-100 transition-opacity ${
+                        selectedLegendFilter && selectedLegendFilter !== 'recent' ? 'opacity-40' : 'opacity-100'
+                      }`}
                     >
                       <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
-                      <span className="font-medium text-slate-200">Recent Detection</span>
+                      <span className="font-medium text-slate-200">Recent Telemetry</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Map Control Buttons (Top Right) */}
-                <div className="absolute top-4 right-4 flex flex-col gap-1.5 bg-slate-900/90 backdrop-blur-md rounded-lg p-1 border border-slate-700/60 shadow-lg text-white">
+                {/* Map Zoom Controls (Top Right) */}
+                <div className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 flex flex-col gap-1 bg-slate-900/90 backdrop-blur-md rounded-lg p-1 border border-slate-700/60 shadow-lg text-white">
                   <button
                     onClick={() => setMapZoomLevel(prev => Math.min(prev + 0.15, 1.45))}
                     aria-label="Zoom in"
@@ -803,44 +692,38 @@ export const LandingPage: React.FC = () => {
                 </div>
 
                 {/* Floating Incident Information Card (Bottom Right) */}
-                <motion.div
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
-                  className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 bg-white/95 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-slate-200 shadow-2xl max-w-[280px] sm:max-w-[320px] text-slate-900"
-                >
+                <div className="absolute bottom-3.5 right-3.5 sm:bottom-5 sm:right-5 bg-white/95 backdrop-blur-md rounded-xl p-3 sm:p-4 border border-slate-200 shadow-2xl max-w-[280px] sm:max-w-[310px] text-slate-900">
                   <div className="flex gap-3 items-center">
                     <div className="flex-1">
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className="w-2 h-2 rounded-full bg-red-600 animate-ping shrink-0" />
-                        <span className="text-xs font-bold text-slate-900 leading-tight">Industrial Fire Detected</span>
+                        <span className="text-xs font-bold text-slate-900 leading-tight">Industrial Fire Event</span>
                       </div>
                       
-                      <div className="space-y-0.5 text-[11px] font-mono text-slate-600 mb-2">
+                      <div className="space-y-0.5 text-[10px] font-mono text-slate-600 mb-2">
                         <div>Lat: 28.6139° N</div>
                         <div>Lon: 77.2090° E</div>
                         <div className="flex items-center gap-1">
                           <span>Confidence:</span>
-                          <span className="font-bold text-emerald-600">92%</span>
+                          <span className="font-bold text-emerald-600">92% High</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <span>Risk Level:</span>
-                          <span className="font-bold text-red-600">High</span>
+                          <span className="font-bold text-red-600">Critical</span>
                         </div>
                       </div>
 
                       <Link
                         to="/dashboard"
-                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
+                        className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 hover:text-blue-700 transition-colors"
                       >
-                        <span>View Details</span>
+                        <span>Inspect in Live Map</span>
                         <ArrowRight className="w-3 h-3" />
                       </Link>
                     </div>
 
                     {/* Real Industrial Fire Incident Thumbnail */}
-                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-slate-200 shrink-0 shadow-inner">
+                    <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-lg overflow-hidden border border-slate-200 shrink-0 shadow-inner">
                       <img
                         src="/images/incident-thumbnail.jpg"
                         alt="Incident smoke thumbnail"
@@ -848,28 +731,28 @@ export const LandingPage: React.FC = () => {
                       />
                     </div>
                   </div>
-                </motion.div>
+                </div>
 
               </div>
-            </motion.div>
+            </div>
 
           </div>
         </div>
       </section>
 
       {/* ==================================================== */}
-      {/* 7. SHARED RESPONSIBILITY / FINAL CTA                 */}
+      {/* 7. CALL TO ACTION (SHARED RESPONSIBILITY)            */}
       {/* ==================================================== */}
-      <section id="shared-responsibility" className="relative py-24 md:py-32 overflow-hidden bg-slate-900 text-white">
+      <section id="shared-responsibility" className="relative py-20 sm:py-24 lg:py-28 overflow-hidden bg-slate-900 text-white">
         
         {/* Panoramic Mountain Landscape Background */}
         <div className="absolute inset-0">
           <img
             src="/images/cta-mountains.jpg"
             alt="Misty mountain landscape"
-            className="w-full h-full object-cover object-bottom opacity-40 mix-blend-luminosity"
+            className="w-full h-full object-cover object-bottom opacity-35 mix-blend-luminosity"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/85 to-slate-900/70" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -877,56 +760,46 @@ export const LandingPage: React.FC = () => {
           {/* Subtle Top Tags */}
           <div className="flex justify-between items-start mb-8 text-[11px] font-mono tracking-widest text-slate-400">
             <div className="hidden sm:block leading-relaxed">
-              PEOPLE<br />
-              INDUSTRIES<br />
-              NATURE<br />
-              A SAFER TOMORROW
+              PEOPLE &bull; INDUSTRIES &bull; NATURE<br />
+              A SAFER INDUSTRIAL TOMORROW
             </div>
             
-            <div className="text-right italic font-serif text-slate-300 text-xs sm:text-sm">
-              Different Landscapes<br />
-              One Planet<br />
-              Our Responsibility
+            <div className="text-right font-mono text-slate-400 text-xs">
+              SIH PROBLEM STATEMENT ID 26162
             </div>
           </div>
 
           {/* Center Headline & Call to Action */}
-          <motion.div
-            initial={{ opacity: 0, y: 25 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7 }}
-            className="text-center max-w-3xl mx-auto"
-          >
-            <span className="text-xs font-semibold tracking-widest text-blue-400 uppercase block mb-3">
-              A Safer Tomorrow
+          <div className="text-center max-w-3xl mx-auto">
+            <span className="text-xs font-semibold tracking-wider text-blue-400 uppercase block mb-3">
+              OPERATIONAL READINESS
             </span>
 
-            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-white mb-6 leading-tight">
-              Is a Shared Responsibility.
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-white mb-5 sm:mb-6 leading-tight">
+              Start Monitoring Industrial Thermal Intelligence Today
             </h2>
 
-            <p className="text-base sm:text-lg text-slate-300 leading-relaxed mb-8 max-w-2xl mx-auto">
-              Let's build a future where industries grow, communities thrive and nature is protected — together.
+            <p className="text-sm sm:text-base lg:text-lg text-slate-300 leading-relaxed mb-8 max-w-2xl mx-auto">
+              Whether safeguarding petrochemical refineries, pipeline corridors, or nearby community buffer zones, ThermoScope delivers the verified real-time ground truth you need.
             </p>
 
-            <div className="flex flex-wrap items-center justify-center gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
               <Link
                 to="/dashboard"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-slate-950 bg-white hover:bg-slate-100 shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-xs sm:text-sm font-semibold text-slate-950 bg-white hover:bg-slate-100 shadow-md transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
-                <span>Get Started</span>
+                <span>Launch Live Dashboard</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
               <button
                 onClick={() => setShowStoryModal(true)}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg text-sm font-semibold text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 transition-colors backdrop-blur-sm"
+                className="inline-flex items-center gap-2 px-5 py-3 rounded-lg text-xs sm:text-sm font-semibold text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-600/80 transition-colors backdrop-blur-sm"
               >
-                <span>Join the Movement</span>
+                <span>View System Overview</span>
               </button>
             </div>
-          </motion.div>
+          </div>
 
         </div>
       </section>
@@ -934,69 +807,10 @@ export const LandingPage: React.FC = () => {
       {/* ==================================================== */}
       {/* 8. FOOTER                                            */}
       {/* ==================================================== */}
-      <footer className="py-12 bg-white border-t border-slate-200 text-slate-600">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-slate-100">
-            
-            {/* Brand Logo & Subtitle */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full border border-blue-600/30 bg-blue-50 text-blue-700 flex items-center justify-center shadow-sm">
-                <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                  <path d="M2 12h20" />
-                </svg>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-bold text-base text-slate-900 leading-none">TerraGuard</span>
-                <span className="text-[11px] text-slate-400">Observe &bull; Understand &bull; Protect</span>
-              </div>
-            </div>
-
-            {/* Navigation Links */}
-            <div className="flex flex-wrap justify-center gap-6 text-xs sm:text-sm font-medium text-slate-600">
-              <a href="#home" className="hover:text-slate-950 transition-colors">Home</a>
-              <Link to="/dashboard" className="hover:text-slate-950 transition-colors">Live Map</Link>
-              <a href="#how-it-works" className="hover:text-slate-950 transition-colors">How It Works</a>
-              <a href="#impact" className="hover:text-slate-950 transition-colors">Impact</a>
-              <a href="#challenge" className="hover:text-slate-950 transition-colors">Resources</a>
-              <a href="#shared-responsibility" className="hover:text-slate-950 transition-colors">About</a>
-            </div>
-
-            {/* Social Icons & Tagline */}
-            <div className="flex items-center gap-4 text-slate-400">
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="hover:text-blue-600 transition-colors">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.46 10.9v8.37H9.2V10.9H6.46M7.83 6.27a1.64 1.64 0 1 0 0 3.28 1.64 1.64 0 0 0 0-3.28Z"/></svg>
-              </a>
-              <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="X Twitter" className="hover:text-slate-900 transition-colors">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-              </a>
-              <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="hover:text-red-600 transition-colors">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </a>
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" aria-label="GitHub" className="hover:text-slate-900 transition-colors">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.1-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2z"/></svg>
-              </a>
-            </div>
-
-          </div>
-
-          {/* Bottom Copyright */}
-          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400">
-            <div>
-              &copy; {new Date().getFullYear()} TerraGuard &bull; Industrial Thermal Intelligence Platform.
-            </div>
-            <div className="italic">
-              A safer tomorrow is a brighter tomorrow.
-            </div>
-          </div>
-
-        </div>
-      </footer>
+      <Footer />
 
       {/* ==================================================== */}
-      {/* STORY MODAL                                          */}
+      {/* STORY / OVERVIEW MODAL                               */}
       {/* ==================================================== */}
       <AnimatePresence>
         {showStoryModal && (
@@ -1016,26 +830,26 @@ export const LandingPage: React.FC = () => {
 
               <div className="flex items-center gap-2 text-blue-600 mb-3">
                 <Radio className="w-5 h-5 animate-pulse" />
-                <span className="text-xs font-bold uppercase tracking-wider">Our Mission &amp; Technology</span>
+                <span className="text-xs font-bold uppercase tracking-wider font-mono">Platform Mission &amp; Technology</span>
               </div>
 
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">
-                Turning Orbital Telemetry into Ground Truth
+              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4">
+                Turning Orbital Telemetry into Verifiable Ground Truth
               </h3>
 
               <div className="space-y-4 text-sm text-slate-600 leading-relaxed">
                 <p>
-                  Industrial facilities, petrochemical refineries, and remote storage depots represent immense capital and environmental value. When an undetected thermal event strikes, minutes determine whether it becomes a minor containment or a catastrophic disaster.
+                  Industrial complexes, petrochemical refineries, and chemical storage depots represent critical infrastructure. When a thermal event strikes, rapid verification determines whether it remains routine operational gas flaring or escalates into an emergency blaze.
                 </p>
                 <p>
-                  By harnessing <strong>NASA FIRMS VIIRS (375m) and MODIS satellite data</strong> alongside real-time OpenStreetMap infrastructure topology, our AI engine identifies genuine thermal anomalies and separates operational gas flaring from emergency blazes.
+                  By fusing <strong>NASA FIRMS VIIRS (375m) satellite data</strong> with real-time OpenStreetMap infrastructure topology and machine learning classification, ThermoScope detects real anomalies within minutes of satellite pass.
                 </p>
                 <p>
-                  Authorities and nearby communities receive verified danger buffer notifications, protecting ecosystems, reducing industrial downtime, and ensuring a resilient future.
+                  Disaster response teams and plant managers receive immediate containment buffer insights, minimizing industrial downtime and protecting surrounding populations.
                 </p>
               </div>
 
-              <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between">
+              <div className="mt-6 pt-5 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <span className="text-xs text-slate-400">Powered by NASA LANCE &bull; OpenStreetMap &bull; GeoAI</span>
                 <Link
                   to="/dashboard"
@@ -1052,7 +866,7 @@ export const LandingPage: React.FC = () => {
       </AnimatePresence>
 
       {/* ==================================================== */}
-      {/* LOGIN MODAL                                          */}
+      {/* ENTERPRISE LOGIN MODAL                               */}
       {/* ==================================================== */}
       <AnimatePresence>
         {showLoginModal && (
@@ -1075,10 +889,10 @@ export const LandingPage: React.FC = () => {
               </div>
 
               <h3 className="text-xl font-bold text-slate-900 mb-1">
-                Enterprise Portal Login
+                Enterprise Observer Sign In
               </h3>
               <p className="text-xs text-slate-500 mb-6">
-                Sign in to access real-time dispatch alerts and authority controls.
+                Sign in with official credentials to access real-time dispatch alerts and system administration.
               </p>
 
               <div className="space-y-4">
