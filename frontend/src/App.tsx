@@ -9,6 +9,7 @@ import { AlertsPage } from './pages/AlertsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { AdminPage } from './pages/AdminPage';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 const AppLayout: React.FC = () => {
   const location = useLocation();
@@ -21,16 +22,20 @@ const AppLayout: React.FC = () => {
 
       {/* Dynamic Page Routing */}
       <main className="flex-1">
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/fires" element={<FireExplorerPage />} />
-          <Route path="/fires/:id" element={<FireDetailPage />} />
-          <Route path="/alerts" element={<AlertsPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/admin" element={<AdminPage />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/fires" element={<FireExplorerPage />} />
+            <Route path="/fires/:id" element={<FireDetailPage />} />
+            <Route path="/alerts" element={<AlertsPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            {/* Fallback to Dashboard to guarantee no route ever renders a blank screen */}
+            <Route path="*" element={<DashboardPage />} />
+          </Routes>
+        </ErrorBoundary>
       </main>
 
       {/* Global Footer for operational pages */}

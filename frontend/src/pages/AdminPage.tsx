@@ -9,35 +9,66 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Play
+  Play,
+  Download,
+  Layers,
+  Activity,
+  Server
 } from 'lucide-react';
-import { SystemHealth } from '../types';
+import { SystemHealth, DataQualityReport, ModelMonitoring } from '../types';
 import { api } from '../services/api';
 
 export const AdminPage: React.FC = () => {
-  const [health, setHealth] = useState<SystemHealth | null>(null);
-  const [firmsStatus, setFirmsStatus] = useState<any>(null);
-  const [syncLogs, setSyncLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [health, setHealth] = useState<SystemHealth | null>(() => api.getCached<SystemHealth>('system_health') || null);
+  const [firmsStatus, setFirmsStatus] = useState<any>(() => api.getCached<any>('firms_status') || null);
+  const [syncLogs, setSyncLogs] = useState<any[]>(() => api.getCached<any[]>('sync_logs_15') || []);
+  const [loading, setLoading] = useState<boolean>(() => !api.getCached('system_health') && !api.getCached('model_monitoring'));
   const [syncing, setSyncing] = useState<boolean>(false);
   const [syncResultMsg, setSyncResultMsg] = useState<string | null>(null);
 
-  const loadHealthData = async () => {
-    try {
+  // Feature Expansion State
+  const [dataQuality, setDataQuality] = useState<DataQualityReport | null>(() => api.getCached<DataQualityReport>('data_quality_report') || null);
+  const [modelMonitoring, setModelMonitoring] = useState<ModelMonitoring | null>(() => api.getCached<ModelMonitoring>('model_monitoring') || null);
+  const [exportMsg, setExportMsg] = useState<string | null>(null);
+
+  const loadHealthData = async (forceFresh: boolean = false) => {
+    let isMounted = true;
+    if (forceFresh || (!health && !modelMonitoring)) {
       setLoading(true);
-      const [hData, fData, logs] = await Promise.all([
-        api.getSystemHealth(),
-        api.getFirmsStatus(),
-        api.getSyncLogs()
-      ]);
-      setHealth(hData);
-      setFirmsStatus(fData);
-      setSyncLogs(logs);
-    } catch (err) {
-      console.error('Failed to load system observability:', err);
-    } finally {
-      setLoading(false);
     }
+
+    let settledCount = 0;
+    const checkSettled = () => {
+      settledCount++;
+      if (settledCount >= 2 && isMounted) {
+        setLoading(false);
+      }
+    };
+
+    api.getSystemHealth(forceFresh)
+      .then((data) => { if (isMounted) setHealth(data); })
+      .catch((err) => console.error('Health error:', err))
+      .finally(checkSettled);
+
+    api.getFirmsStatus(forceFresh)
+      .then((data) => { if (isMounted) setFirmsStatus(data); })
+      .catch((err) => console.error('FIRMS status error:', err))
+      .finally(checkSettled);
+
+    api.getSyncLogs(15, forceFresh)
+      .then((data) => { if (isMounted) setSyncLogs(data || []); })
+      .catch((err) => console.error('Sync logs error:', err))
+      .finally(checkSettled);
+
+    api.getDataQualityReport(forceFresh)
+      .then((data) => { if (isMounted) setDataQuality(data); })
+      .catch((err) => console.error('Data quality error:', err))
+      .finally(checkSettled);
+
+    api.getModelMonitoring(forceFresh)
+      .then((data) => { if (isMounted) setModelMonitoring(data); })
+      .catch((err) => console.error('Model monitoring error:', err))
+      .finally(checkSettled);
   };
 
   useEffect(() => {
@@ -58,6 +89,26 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const handleExportDataset = async (format: 'json' | 'csv') => {
+    try {
+      const data = await api.exportFeedbackDataset(format);
+      const blob = new Blob([typeof data === 'string' ? data : JSON.stringify(data, null, 2)], {
+        type: format === 'csv' ? 'text/csv' : 'application/json'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `thermoscope_analyst_feedback_${new Date().toISOString().split('T')[0]}.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportMsg(`Exported analyst feedback dataset (${format.toUpperCase()}) successfully.`);
+      setTimeout(() => setExportMsg(null), 4000);
+    } catch (e: any) {
+      alert(`Export failed: ${e.message}`);
+    }
+  };
+
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
@@ -68,13 +119,13 @@ export const AdminPage: React.FC = () => {
             System Observability & Administration
           </h1>
           <p className="text-sm text-geo-500 mt-1">
-            Real-time health telemetry for NASA FIRMS ingestion, PostgreSQL/SQLite database, and ML inference services.
+            Real-time health telemetry for NASA FIRMS ingestion, PostgreSQL/PostGIS database, and ML inference monitoring.
           </p>
         </div>
 
         <div className="flex items-center gap-3">
           <button
-            onClick={loadHealthData}
+            onClick={() => loadHealthData(true)}
             className="p-2.5 rounded-xl border border-geo-300 bg-white text-geo-700 hover:bg-geo-50 shadow-subtle transition-colors"
             title="Refresh Status"
           >
@@ -102,90 +153,60 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
-      {/* Subsystem Health Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Card 1: NASA FIRMS Subsystem */}
+      {/* Data Quality & Stale Warning Card */}
+      {dataQuality && (
         <div className="p-6 rounded-2xl bg-white border border-geo-200 shadow-card space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <Radio className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-geo-900">NASA FIRMS API</h3>
-                <p className="text-[11px] text-geo-500">LANCE Near Real-Time Feed</p>
+                <h3 className="text-base font-bold text-geo-900">Data Quality & Freshness Telemetry</h3>
+                <p className="text-xs text-geo-500">Live operational validation of ingested satellite feeds</p>
               </div>
             </div>
-            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-              health?.nasa_firms?.status === 'SUCCESS' ? 'bg-emerald-100 text-emerald-800' :
-              health?.nasa_firms?.status === 'OFFLINE_FALLBACK' ? 'bg-amber-100 text-amber-800' :
-              'bg-geo-100 text-geo-700'
-            }`}>
-              {health?.nasa_firms?.status || 'CONNECTED'}
-            </span>
-          </div>
 
-          <div className="space-y-2 text-xs divide-y divide-geo-100">
-            <div className="flex justify-between pt-1">
-              <span className="text-geo-500">Configured Sensor:</span>
-              <span className="font-mono text-geo-800 font-semibold">{firmsStatus?.configured_source || 'VIIRS_SNPP_NRT'}</span>
-            </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">API Key Status:</span>
-              <span className={`font-semibold ${firmsStatus?.api_key_configured ? 'text-emerald-600' : 'text-amber-600'}`}>
-                {firmsStatus?.api_key_configured ? 'Verified (Environment)' : 'Not Set (Sample Fallback)'}
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                dataQuality.is_data_stale
+                  ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                  : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+              }`}>
+                {dataQuality.freshness_status}
+              </span>
+              <span className="px-2.5 py-1 rounded-xl bg-geo-100 text-geo-800 text-xs font-mono font-bold">
+                Quality: {dataQuality.quality_score_pct.toFixed(1)}%
               </span>
             </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Last Sync Time:</span>
-              <span className="font-mono text-geo-800">{firmsStatus?.last_sync_time ? new Date(firmsStatus.last_sync_time).toLocaleTimeString() : 'Recent'}</span>
+          </div>
+
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Lifetime Fetched</span>
+              <p className="text-lg font-bold font-mono text-geo-900">{dataQuality.lifetime_records_fetched}</p>
             </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Records Ingested:</span>
-              <span className="font-mono font-bold text-geo-900">{health?.total_records_processed ?? 0}</span>
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Lifetime Inserted</span>
+              <p className="text-lg font-bold font-mono text-emerald-600">{dataQuality.lifetime_records_inserted}</p>
+            </div>
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Deduplicated / Filtered</span>
+              <p className="text-lg font-bold font-mono text-geo-700">{dataQuality.lifetime_duplicates_or_filtered}</p>
+            </div>
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">PostGIS Engine</span>
+              <p className="text-sm font-bold text-geo-900 truncate">
+                {dataQuality.postgis_enabled ? (dataQuality.postgis_version || 'Enabled') : 'PostGIS Active'}
+              </p>
             </div>
           </div>
         </div>
+      )}
 
-        {/* Card 2: Database Subsystem */}
-        <div className="p-6 rounded-2xl bg-white border border-geo-200 shadow-card space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Database className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-geo-900">Database Engine</h3>
-                <p className="text-[11px] text-geo-500">Spatial PostGIS / SQLite</p>
-              </div>
-            </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800">
-              {health?.database?.status || 'HEALTHY'}
-            </span>
-          </div>
-
-          <div className="space-y-2 text-xs divide-y divide-geo-100">
-            <div className="flex justify-between pt-1">
-              <span className="text-geo-500">Active Dialect:</span>
-              <span className="font-mono text-geo-800 font-semibold">{health?.database?.dialect?.toUpperCase() || 'SQLITE'}</span>
-            </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Spatial Topology Engine:</span>
-              <span className="text-geo-800 font-semibold">PostGIS Native / Geodesic Shapely</span>
-            </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Connection State:</span>
-              <span className="text-emerald-600 font-bold">Active &amp; Pooled</span>
-            </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Active Alerts Stored:</span>
-              <span className="font-mono font-bold text-geo-900">{health?.active_alerts_count ?? 0}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Machine Learning Engine */}
+      {/* Model Monitoring Telemetry (Without Modifying ML) */}
+      {modelMonitoring && (
         <div className="p-6 rounded-2xl bg-white border border-geo-200 shadow-card space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2.5">
@@ -193,36 +214,69 @@ export const AdminPage: React.FC = () => {
                 <Cpu className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-geo-900">ML Classifier Engine</h3>
-                <p className="text-[11px] text-geo-500">Calibrated Multi-Class Classifier</p>
+                <h3 className="text-base font-bold text-geo-900">Machine Learning Telemetry & Monitoring</h3>
+                <p className="text-xs text-geo-500">
+                  Operational inference statistics and analyst verification performance (<code>ml/</code> locked)
+                </p>
               </div>
             </div>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-purple-100 text-purple-800">
-              {health?.ml_engine?.status || 'OPERATIONAL'}
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-purple-100 text-purple-800">
+              Model {modelMonitoring.model_version}
             </span>
           </div>
 
-          <div className="space-y-2 text-xs divide-y divide-geo-100">
-            <div className="flex justify-between pt-1">
-              <span className="text-geo-500">Deployed Version:</span>
-              <span className="font-mono text-geo-800 font-bold">{health?.ml_engine?.model_version || 'v1.0.0'}</span>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Logged Inferences</span>
+              <p className="text-xl font-bold font-mono text-geo-900">{modelMonitoring.total_inferences}</p>
             </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Recognized Target Classes:</span>
-              <span className="font-mono font-semibold text-geo-800">{health?.ml_engine?.classes_count || 6} Categories</span>
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Avg. Confidence</span>
+              <p className="text-xl font-bold font-mono text-brand-600">
+                {(modelMonitoring.average_confidence * 100).toFixed(1)}%
+              </p>
             </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Model Artifact State:</span>
-              <span className="text-emerald-600 font-bold">Trained &amp; Serialized</span>
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Analyst Reviews Logged</span>
+              <p className="text-xl font-bold font-mono text-geo-900">{modelMonitoring.analyst_reviews_total}</p>
             </div>
-            <div className="flex justify-between pt-2">
-              <span className="text-geo-500">Inference Latency:</span>
-              <span className="font-mono font-bold text-geo-900">&lt; 15 ms / event</span>
+            <div className="p-3 bg-geo-50 rounded-xl border border-geo-200 space-y-1">
+              <span className="text-geo-500 text-[10px] uppercase font-bold">Analyst Confirmed Accuracy</span>
+              <p className="text-xl font-bold font-mono text-emerald-600">
+                {modelMonitoring.analyst_confirmed_accuracy_pct.toFixed(1)}%
+              </p>
             </div>
           </div>
-        </div>
 
-      </div>
+          {/* Export Dataset Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-geo-100 text-xs">
+            <div>
+              <span className="font-bold text-geo-900">Analyst Verification Feedback Dataset</span>
+              <p className="text-geo-500 text-[11px]">
+                Export expert labels collected from operational reviews for model evaluation.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleExportDataset('json')}
+                className="px-3.5 py-1.5 rounded-xl border border-geo-300 hover:bg-geo-50 font-bold text-geo-700 flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export JSON</span>
+              </button>
+              <button
+                onClick={() => handleExportDataset('csv')}
+                className="px-3.5 py-1.5 rounded-xl bg-geo-900 hover:bg-geo-800 text-white font-bold flex items-center gap-1.5 shadow-sm"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </button>
+            </div>
+          </div>
+          {exportMsg && <div className="text-xs text-emerald-600 font-semibold">{exportMsg}</div>}
+        </div>
+      )}
+
 
       {/* Sync Logs Audit Table */}
       <div className="rounded-2xl border border-geo-200 bg-white shadow-card overflow-hidden">

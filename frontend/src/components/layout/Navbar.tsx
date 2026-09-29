@@ -13,33 +13,78 @@ import {
   Menu,
   X
 } from 'lucide-react';
-import { api } from '../../services/api';
+import { api, API_BASE } from '../../services/api';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const [firmsConnected, setFirmsConnected] = useState<boolean>(true);
-  const [criticalAlertsCount, setCriticalAlertsCount] = useState<number>(0);
+  const [activeAlertsCount, setActiveAlertsCount] = useState<number>(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
+  const refreshAlertsCount = () => {
+    api.getActiveAlertsCount().then((count) => {
+      setActiveAlertsCount(count);
+    }).catch(() => {
+      setActiveAlertsCount(0);
+    });
+  };
+
   useEffect(() => {
-    let isMounted = true;
+    // Initial fetch on route change or mount
+    refreshAlertsCount();
+
     api.getDashboardStats().then((stats) => {
-      if (isMounted) {
-        setFirmsConnected(stats.is_live_firms_connected);
-        setCriticalAlertsCount(stats.critical_alerts_count);
-      }
+      setFirmsConnected(stats.is_live_firms_connected);
     }).catch(() => {});
 
-    return () => {
-      isMounted = false;
+    // 1. Listen for local alert state actions (e.g. acknowledge or resolve in AlertsPage)
+    const handleLocalAlertUpdate = () => {
+      refreshAlertsCount();
     };
-  }, [location.pathname]);
+    window.addEventListener('thermoscope:alerts_updated', handleLocalAlertUpdate);
+
+    // 2. Real-Time SSE Event Stream for live multi-tab & server broadcast sync
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource(`${API_BASE}/events/stream`);
+      const handleSseEvent = () => {
+        // Reconcile real alert state from backend instead of naive +1
+        refreshAlertsCount();
+      };
+
+      es.addEventListener('new_alert', handleSseEvent);
+      es.addEventListener('alert_acknowledged', handleSseEvent);
+      es.addEventListener('alert_resolved', handleSseEvent);
+      es.addEventListener('alert_escalated', handleSseEvent);
+      es.addEventListener('alert_assigned', handleSseEvent);
+      es.addEventListener('incident_updated', handleSseEvent);
+
+      es.onmessage = (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          const ev = payload.event || payload.type;
+          if (ev && ev !== 'ping' && ev !== 'connected') {
+            refreshAlertsCount();
+          }
+        } catch {}
+      };
+    } catch (e) {
+      console.warn('Navbar SSE listener unavailable', e);
+    }
+
+    return () => {
+      window.removeEventListener('thermoscope:alerts_updated', handleLocalAlertUpdate);
+      if (es) {
+        es.close();
+      }
+    };
+  }, []);
 
   const navLinks = [
     { name: 'Home', path: '/', icon: Flame },
     { name: 'Live Map', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Fire Explorer', path: '/fires', icon: Search },
-    { name: 'Alerts', path: '/alerts', icon: Bell, badge: criticalAlertsCount },
+    { name: 'Alerts', path: '/alerts', icon: Bell, badge: activeAlertsCount },
     { name: 'Analytics', path: '/analytics', icon: BarChart3 },
     { name: 'Awareness', path: '/settings', icon: Settings },
     { name: 'System', path: '/admin', icon: ShieldCheck },

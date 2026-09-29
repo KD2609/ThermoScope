@@ -22,18 +22,32 @@ def process_alerts_for_detection(
     created_alerts: List[Alert] = []
     det_date_str = detection.detection_time.strftime("%Y%m%d")
 
+    now_utc = datetime.now(timezone.utc)
+    incident_id = getattr(detection, "incident_id", None)
+
     # 1. Authority Alert: Critical Industrial Fire Event
     if prediction.severity in ("CRITICAL", "HIGH") and "Industrial" in prediction.predicted_class:
-        dedup_key = f"{detection.id}_CRITICAL_INDUSTRIAL_{det_date_str}"
+        # Incident-aware or detection-aware dedup key
+        scope_prefix = incident_id if incident_id else detection.id
+        dedup_key = f"{scope_prefix}_CRITICAL_INDUSTRIAL_{det_date_str}"
         existing = db.query(Alert).filter(Alert.dedup_key == dedup_key).first()
 
-        if not existing:
+        if existing:
+            # Check for escalation: if existing was HIGH and new is CRITICAL, escalate
+            if existing.severity == "HIGH" and prediction.severity == "CRITICAL":
+                existing.severity = "CRITICAL"
+                existing.escalation_level = (existing.escalation_level or 1) + 1
+                existing.escalated_at = now_utc
+                existing.message += f" [ESCALATED: Severe thermal surge observed at {now_utc.strftime('%H:%M')} UTC (FRP: {detection.frp:.1f} MW)]."
+                created_alerts.append(existing)
+        else:
             facility_str = f" near {prediction.nearby_industrial_name}" if prediction.nearby_industrial_name else ""
             dist_str = f" ({prediction.distance_to_industrial_km:.1f} km)" if prediction.distance_to_industrial_km else ""
 
             alert = Alert(
                 id=f"ALT-IND-{detection.id[:12]}",
                 fire_detection_id=detection.id,
+                incident_id=incident_id,
                 alert_type="CRITICAL_INDUSTRIAL_FIRE",
                 severity=prediction.severity,
                 title=f"Industrial Fire Detected{facility_str}",
@@ -47,26 +61,35 @@ def process_alerts_for_detection(
                 distance_to_residence_km=prediction.distance_to_residential_km,
                 status="NEW",
                 dedup_key=dedup_key,
-                created_at=datetime.now(timezone.utc)
+                escalation_level=1,
+                created_at=now_utc
             )
             db.add(alert)
             created_alerts.append(alert)
 
     # 2. Public Awareness & Residential Buffer Alert (Responsible Non-Alarmist Wording)
-    # Only triggered when severity is HIGH/CRITICAL and distance to residential area is within high threshold
     if (
         prediction.distance_to_residential_km is not None and
         prediction.distance_to_residential_km <= settings.DANGER_ZONE_HIGH_KM and
         prediction.severity in ("CRITICAL", "HIGH")
     ):
-        dedup_key = f"{detection.id}_RESIDENTIAL_AWARENESS_{det_date_str}"
+        scope_prefix = incident_id if incident_id else detection.id
+        dedup_key = f"{scope_prefix}_RESIDENTIAL_AWARENESS_{det_date_str}"
         existing = db.query(Alert).filter(Alert.dedup_key == dedup_key).first()
 
-        if not existing:
+        if existing:
+            if existing.severity == "HIGH" and prediction.severity == "CRITICAL":
+                existing.severity = "CRITICAL"
+                existing.escalation_level = (existing.escalation_level or 1) + 1
+                existing.escalated_at = now_utc
+                existing.message += f" [ESCALATED: Proximity risk elevated at {now_utc.strftime('%H:%M')} UTC]."
+                created_alerts.append(existing)
+        else:
             res_name = prediction.nearby_residential_name or "adjacent residential sector"
             alert = Alert(
                 id=f"ALT-RES-{detection.id[:12]}",
                 fire_detection_id=detection.id,
+                incident_id=incident_id,
                 alert_type="RESIDENTIAL_PROXIMITY_AWARENESS",
                 severity=prediction.severity,
                 title=f"Potential Elevated Thermal Source Near {res_name}",
@@ -80,20 +103,23 @@ def process_alerts_for_detection(
                 distance_to_residence_km=prediction.distance_to_residential_km,
                 status="NEW",
                 dedup_key=dedup_key,
-                created_at=datetime.now(timezone.utc)
+                escalation_level=1,
+                created_at=now_utc
             )
             db.add(alert)
             created_alerts.append(alert)
 
     # 3. Persistent Gas Flare Anomaly Alert
     if "Gas Flare" in prediction.predicted_class and detection.frp > 350.0:
-        dedup_key = f"{detection.id}_FLARE_SURGE_{det_date_str}"
+        scope_prefix = incident_id if incident_id else detection.id
+        dedup_key = f"{scope_prefix}_FLARE_SURGE_{det_date_str}"
         existing = db.query(Alert).filter(Alert.dedup_key == dedup_key).first()
 
         if not existing:
             alert = Alert(
                 id=f"ALT-FLR-{detection.id[:12]}",
                 fire_detection_id=detection.id,
+                incident_id=incident_id,
                 alert_type="PERSISTENT_THERMAL_SURGE",
                 severity="MEDIUM",
                 title=f"Elevated Flare Output at {prediction.nearby_industrial_name or 'Facility'}",
@@ -106,15 +132,27 @@ def process_alerts_for_detection(
                 distance_to_residence_km=prediction.distance_to_residential_km,
                 status="NEW",
                 dedup_key=dedup_key,
-                created_at=datetime.now(timezone.utc)
+                escalation_level=1,
+                created_at=now_utc
             )
             db.add(alert)
             created_alerts.append(alert)
 
     if created_alerts:
         db.commit()
+        try:
+            from backend.app.api.alerts import invalidate_alert_count_cache
+            invalidate_alert_count_cache()
+        except Exception:
+            pass
         for a in created_alerts:
             db.refresh(a)
+            # Broadcast to SSE bus non-blockingly
+            try:
+                from backend.app.services.realtime_service import broadcast_event
+                broadcast_event("new_alert", a.to_dict())
+            except Exception:
+                pass
 
     return created_alerts
 

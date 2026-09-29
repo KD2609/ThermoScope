@@ -14,11 +14,13 @@ import time
 from typing import Dict, Any, List, Optional
 import requests
 from sqlalchemy.orm import Session
+from geoalchemy2.elements import WKTElement
 
 from backend.app.config import settings
 from backend.app.models.models import FireDetection, FirePrediction, SyncLog
 from backend.app.services.geospatial_service import (
-    find_closest_industrial_site, find_closest_residential_area
+    find_closest_industrial_site, find_closest_residential_area,
+    get_spatial_historical_baseline, calculate_cluster_density
 )
 from backend.app.services.risk_service import calculate_risk_and_response
 from backend.app.services.alert_engine import process_alerts_for_detection
@@ -126,6 +128,13 @@ class FIRMSService:
 
             db.commit()
 
+            # 3. Cluster new or existing detections into incidents
+            try:
+                from backend.app.services.incident_service import cluster_detections_into_incidents
+                cluster_detections_into_incidents(db)
+            except Exception as cluster_ex:
+                print(f"[FIRMS Ingestion] Incident clustering notice: {cluster_ex}")
+
         except Exception as ex:
             db.rollback()
             sync_status = "FAILED"
@@ -161,23 +170,31 @@ class FIRMSService:
         }
 
     def _parse_firms_csv(self, csv_content: str) -> List[Dict[str, Any]]:
-        """Parse raw NASA FIRMS CSV text into normalized dictionaries."""
+        """Parse raw NASA FIRMS CSV text into validated and normalized dictionaries."""
         records = []
         reader = csv.DictReader(io.StringIO(csv_content))
         for row in reader:
             try:
                 lat = float(row.get("latitude", 0.0))
                 lon = float(row.get("longitude", 0.0))
-                acq_date = row.get("acq_date", datetime.utcnow().strftime("%Y-%m-%d"))
+
+                # Validate geographic coordinates
+                if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+                    continue
+
+                acq_date = row.get("acq_date", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
                 acq_time = row.get("acq_time", "0000").zfill(4)
 
                 # Brightness temperature: bright_ti4 (VIIRS) or brightness (MODIS)
                 bt_str = row.get("bright_ti4") or row.get("brightness") or "330.0"
                 brightness = float(bt_str)
+                # Physical validation: exclude out-of-range sensor readings
+                if brightness < 200.0 or brightness > 650.0:
+                    continue
 
-                # FRP
+                # FRP: Fire Radiative Power (MW)
                 frp_str = row.get("frp") or "0.0"
-                frp = float(frp_str) if frp_str else 0.0
+                frp = max(0.0, float(frp_str) if frp_str else 0.0)
 
                 # Confidence (MODIS is 0-100, VIIRS is 'l', 'n', 'h' or 0-100)
                 conf_val = row.get("confidence", "70")
@@ -197,8 +214,11 @@ class FIRMSService:
                 satellite = row.get("satellite", "VIIRS/MODIS")
                 instrument = row.get("instrument", self.source.split("_")[0])
 
-                # Parse timestamp
-                time_iso = f"{acq_date}T{acq_time[:2]}:{acq_time[2:4]}:00Z"
+                # Timezone-aware UTC timestamp parsing
+                try:
+                    time_iso = f"{acq_date}T{acq_time[:2]}:{acq_time[2:4]}:00Z"
+                except Exception:
+                    time_iso = datetime.now(timezone.utc).isoformat()
 
                 records.append({
                     "latitude": lat,
@@ -217,13 +237,13 @@ class FIRMSService:
                     "raw_payload": json.dumps(row),
                     "is_demo_fallback": False
                 })
-            except Exception as e:
+            except Exception:
                 continue
 
         return records
 
     def _process_single_record(self, record: Dict[str, Any], db: Session, is_live: bool = False) -> bool:
-        """Deduplicate, insert detection, run prediction, risk assessment, and alerts."""
+        """Deduplicate, insert detection with PostGIS geom, compute real baseline, run ML and alerts."""
         lat = record["latitude"]
         lon = record["longitude"]
         date_str = record.get("acq_date", "2026-09-17")
@@ -233,15 +253,17 @@ class FIRMSService:
 
         dedup_hash = compute_dedup_hash(source, sensor, lat, lon, date_str, time_str)
 
-        # Check existing detection
+        # Idempotent deduplication check
         existing = db.query(FireDetection).filter(FireDetection.dedup_hash == dedup_hash).first()
         if existing:
             return False
 
-        # Parse datetime
+        # Parse datetime into timezone-aware UTC
         det_time_raw = record.get("detection_time", "2026-09-17T12:00:00Z")
         try:
             det_dt = datetime.fromisoformat(det_time_raw.replace("Z", "+00:00"))
+            if det_dt.tzinfo is None:
+                det_dt = det_dt.replace(tzinfo=timezone.utc)
         except Exception:
             det_dt = datetime.now(timezone.utc)
 
@@ -253,6 +275,7 @@ class FIRMSService:
             sensor=sensor,
             latitude=lat,
             longitude=lon,
+            geom=WKTElement(f"POINT({lon} {lat})", srid=4326),
             detection_time=det_dt,
             brightness_temperature=record["brightness_temperature"],
             frp=record.get("frp", 0.0),
@@ -267,11 +290,30 @@ class FIRMSService:
         db.add(detection)
         db.flush()
 
-        # 3. Geospatial Proximity Matching
+        # 3. Geospatial Proximity Matching (with indexed spatial filtering)
         closest_ind_name, closest_ind_type, dist_ind_km = find_closest_industrial_site(lat, lon, db)
         closest_res_name, dist_res_km = find_closest_residential_area(lat, lon, db)
 
-        # 4. Feature Extraction & Machine Learning Classification
+        # 4. Compute Real Rolling 30-Day Spatial Baseline & Cluster Density
+        baseline = get_spatial_historical_baseline(
+            db=db,
+            lat=lat,
+            lon=lon,
+            target_time=det_dt,
+            window_days=settings.DEFAULT_ANALYTICAL_WINDOW_DAYS,
+            radius_km=settings.SPATIAL_ANALYTICAL_RADIUS_KM
+        )
+        cluster_density = calculate_cluster_density(
+            lat=lat,
+            lon=lon,
+            db=db,
+            target_time=det_dt,
+            radius_km=3.0
+        )
+
+        land_cover = "industrial" if (dist_ind_km is not None and dist_ind_km <= 2.5) else "other"
+
+        # 5. Feature Extraction & Machine Learning Classification using REAL observation stats
         feature_data = {
             "brightness_temperature": detection.brightness_temperature,
             "frp": detection.frp,
@@ -281,15 +323,15 @@ class FIRMSService:
             "distance_to_industrial_site": dist_ind_km if dist_ind_km is not None else 30.0,
             "industrial_site_type": closest_ind_type if closest_ind_type else "none",
             "distance_to_residential_area": dist_res_km if dist_res_km is not None else 10.0,
-            "persistence_score": 0.85 if dist_ind_km and dist_ind_km < 1.0 else 0.15,
-            "historical_fire_count": 15 if dist_ind_km and dist_ind_km < 1.5 else 1,
-            "fire_cluster_density": 0.7 if dist_ind_km and dist_ind_km < 2.0 else 0.2,
-            "land_cover": "industrial" if dist_ind_km and dist_ind_km < 3.0 else "other"
+            "persistence_score": baseline["persistence_score"],
+            "historical_fire_count": baseline["observation_count"],
+            "fire_cluster_density": cluster_density,
+            "land_cover": land_cover
         }
 
         pred_res = predict_thermal_event(feature_data)
 
-        # 5. Risk Assessment & Actionable Response
+        # 6. Risk Assessment & Actionable Response incorporating real baseline metrics
         risk_res = calculate_risk_and_response(
             brightness_temp=detection.brightness_temperature,
             frp=detection.frp,
@@ -297,7 +339,9 @@ class FIRMSService:
             predicted_class=pred_res["predicted_class"],
             distance_to_industrial_km=dist_ind_km,
             industrial_site_type=closest_ind_type,
-            distance_to_residential_km=dist_res_km
+            distance_to_residential_km=dist_res_km,
+            persistence_score=baseline["persistence_score"],
+            historical_fire_count=baseline["observation_count"]
         )
 
         prediction = FirePrediction(
@@ -319,8 +363,15 @@ class FIRMSService:
         db.add(prediction)
         db.flush()
 
-        # 6. Evaluate and Trigger Deduplicated Alerts
+        # 7. Evaluate and Trigger Deduplicated Alerts
         process_alerts_for_detection(detection, prediction, db)
+
+        # Broadcast live detection event
+        try:
+            from backend.app.services.realtime_service import broadcast_event
+            broadcast_event("new_fire", detection.to_dict())
+        except Exception:
+            pass
 
         return True
 

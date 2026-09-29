@@ -17,33 +17,71 @@ import { api } from '../services/api';
 import { SeverityBadge, ClassBadge } from '../components/ui/Badge';
 
 export const FireExplorerPage: React.FC = () => {
-  const [fires, setFires] = useState<FireDetection[]>([]);
-  const [total, setTotal] = useState<number>(0);
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(15);
-  const [loading, setLoading] = useState<boolean>(true);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
   const [severityFilter, setSeverityFilter] = useState<string>('');
   const [classFilter, setClassFilter] = useState<string>('');
   const [minConfidence, setMinConfidence] = useState<number>(50);
+  const [debouncedMinConfidence, setDebouncedMinConfidence] = useState<number>(50);
   const [sensorFilter, setSensorFilter] = useState<string>('');
 
-  const loadFires = async () => {
+  const initialCached = api.getCached<{ total: number; page: number; page_size: number; items: FireDetection[] }>(
+    api.getFiresKey({ page: 1, page_size: 15 })
+  );
+
+  const [fires, setFires] = useState<FireDetection[]>(() => initialCached?.items || []);
+  const [total, setTotal] = useState<number>(() => initialCached?.total || 0);
+  const [loading, setLoading] = useState<boolean>(() => !initialCached);
+
+  // Debounce search term
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Debounce minConfidence slider changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedMinConfidence(minConfidence);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [minConfidence]);
+
+  const loadFires = async (forceFresh: boolean = false) => {
+    const params = {
+      page,
+      page_size: pageSize,
+      search: debouncedSearchTerm.trim() || undefined,
+      severity: severityFilter || undefined,
+      predicted_class: classFilter || undefined,
+      min_confidence: debouncedMinConfidence > 50 ? debouncedMinConfidence : undefined,
+      sensor: sensorFilter || undefined
+    };
+
+    const cacheKey = api.getFiresKey(params);
+    const cached = api.getCached<{ total: number; page: number; page_size: number; items: FireDetection[] }>(cacheKey);
+
+    if (cached && !forceFresh) {
+      setFires(cached.items || []);
+      setTotal(cached.total || 0);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const res = await api.getFires({
-        page,
-        page_size: pageSize,
-        severity: severityFilter || undefined,
-        predicted_class: classFilter || undefined,
-        min_confidence: minConfidence > 50 ? minConfidence : undefined,
-        sensor: sensorFilter || undefined
-      });
-      setFires(res.items);
-      setTotal(res.total);
-    } catch (err) {
+      const res = await api.getFires(params, undefined, forceFresh);
+      setFires(res.items || []);
+      setTotal(res.total || 0);
+    } catch (err: any) {
       console.error('Failed to load fires:', err);
     } finally {
       setLoading(false);
@@ -51,18 +89,14 @@ export const FireExplorerPage: React.FC = () => {
   };
 
   useEffect(() => {
+    let isCurrent = true;
     loadFires();
-  }, [page, severityFilter, classFilter, minConfidence, sensorFilter]);
+    return () => {
+      isCurrent = false;
+    };
+  }, [page, severityFilter, classFilter, debouncedMinConfidence, sensorFilter, debouncedSearchTerm]);
 
-  const filteredFires = fires.filter((f) => {
-    if (!searchTerm) return true;
-    const term = searchTerm.toLowerCase();
-    return (
-      f.id.toLowerCase().includes(term) ||
-      (f.prediction?.nearby_industrial_name && f.prediction.nearby_industrial_name.toLowerCase().includes(term)) ||
-      (f.prediction?.predicted_class && f.prediction.predicted_class.toLowerCase().includes(term))
-    );
-  });
+  const filteredFires = fires;
 
   const exportCsv = () => {
     const headers = [
@@ -118,7 +152,7 @@ export const FireExplorerPage: React.FC = () => {
             <span>Export CSV</span>
           </button>
           <button
-            onClick={loadFires}
+            onClick={() => loadFires(true)}
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-geo-900 hover:bg-geo-800 text-white font-semibold text-xs shadow-sm transition-colors"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -224,7 +258,7 @@ export const FireExplorerPage: React.FC = () => {
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-geo-400">
                     <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-600" />
-                    <span>Loading incidents from database...</span>
+                    <span>Loading fire incidents...</span>
                   </td>
                 </tr>
               ) : filteredFires.length === 0 ? (
@@ -307,22 +341,30 @@ export const FireExplorerPage: React.FC = () => {
         {/* Pagination Bar */}
         <div className="py-3 px-4 bg-geo-50 border-t border-geo-200 flex items-center justify-between text-xs text-geo-600">
           <div>
-            Showing <strong className="text-geo-900">{filteredFires.length}</strong> of{' '}
-            <strong className="text-geo-900">{total}</strong> total observations
+            {loading ? (
+              <span className="text-geo-400 font-medium">Loading observations...</span>
+            ) : (
+              <>
+                Showing <strong className="text-geo-900">{filteredFires.length}</strong> of{' '}
+                <strong className="text-geo-900">{total}</strong> total observations
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page <= 1}
+              disabled={loading || page <= 1}
               className="p-1.5 rounded-lg border border-geo-200 bg-white disabled:opacity-40 hover:bg-geo-50"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="font-medium">Page {page} of {totalPages || 1}</span>
+            <span className="font-medium">
+              {loading ? 'Page ...' : `Page ${page} of ${totalPages || 1}`}
+            </span>
             <button
               onClick={() => setPage(Math.min(totalPages, page + 1))}
-              disabled={page >= totalPages}
+              disabled={loading || page >= totalPages}
               className="p-1.5 rounded-lg border border-geo-200 bg-white disabled:opacity-40 hover:bg-geo-50"
             >
               <ChevronRight className="w-4 h-4" />

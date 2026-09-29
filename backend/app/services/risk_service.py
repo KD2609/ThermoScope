@@ -14,9 +14,11 @@ def calculate_risk_and_response(
     predicted_class: str,
     distance_to_industrial_km: Optional[float],
     industrial_site_type: Optional[str],
-    distance_to_residential_km: Optional[float]
+    distance_to_residential_km: Optional[float],
+    persistence_score: float = 0.0,
+    historical_fire_count: int = 0
 ) -> Dict[str, Any]:
-    """Compute multi-factor risk assessment and response recommendation."""
+    """Compute multi-factor risk assessment and response recommendation incorporating real persistence."""
     # 1. Thermal Intensity Component (0 - 100)
     # Brightness temp normal range 300K - 500K
     bt_norm = max(0.0, min(100.0, (brightness_temp - 300.0) / 1.5))
@@ -77,20 +79,26 @@ def calculate_risk_and_response(
     }
     cls_weight = class_weights.get(predicted_class, 1.0)
 
+    # Persistence component (0 - 100)
+    persist_comp = max(0.0, min(100.0, persistence_score * 100.0))
+
     # Weighted sum
     w_int = settings.RISK_WEIGHT_INTENSITY
     w_ind = settings.RISK_WEIGHT_INDUSTRIAL_PROXIMITY
     w_res = settings.RISK_WEIGHT_RESIDENTIAL_PROXIMITY
     w_conf = settings.RISK_WEIGHT_CONFIDENCE
+    w_persist = settings.RISK_WEIGHT_PERSISTENCE
 
     raw_risk = (
         (intensity_score * w_int) +
         (ind_score * w_ind) +
         (res_score * w_res) +
-        ((confidence / 100.0 * 100.0) * w_conf)
+        ((confidence / 100.0 * 100.0) * w_conf) +
+        (persist_comp * w_persist)
     ) * cls_weight
 
     risk_score = round(max(5.0, min(99.0, raw_risk)), 1)
+
 
     # Severity categorization
     if risk_score >= 80.0:

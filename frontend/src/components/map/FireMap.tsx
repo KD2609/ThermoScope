@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import { useNavigate } from 'react-router-dom';
-import { FireDetection, IndustrialSite, ResidentialArea } from '../../types';
-import { Factory, Home, Flame, Layers, AlertTriangle } from 'lucide-react';
+import { FireDetection, IndustrialSite, ResidentialArea, Hotspot } from '../../types';
+import { Factory, Home, Flame, Layers, AlertTriangle, Zap, ShieldAlert } from 'lucide-react';
+import { api } from '../../services/api';
 
 interface FireMapProps {
   fires: FireDetection[];
@@ -12,6 +13,8 @@ interface FireMapProps {
   selectedFireId?: string | null;
   onSelectFire?: (fire: FireDetection) => void;
   height?: string;
+  initialShowHotspots?: boolean;
+  initialShowHeatmap?: boolean;
 }
 
 export const FireMap: React.FC<FireMapProps> = ({
@@ -20,19 +23,26 @@ export const FireMap: React.FC<FireMapProps> = ({
   residentialAreas = [],
   selectedFireId,
   onSelectFire,
-  height = '650px'
+  height = '650px',
+  initialShowHotspots = false,
+  initialShowHeatmap = false
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
   const indLayerRef = useRef<L.LayerGroup | null>(null);
   const resLayerRef = useRef<L.LayerGroup | null>(null);
+  const hotspotLayerRef = useRef<L.LayerGroup | null>(null);
+  const heatmapLayerRef = useRef<L.LayerGroup | null>(null);
   const navigate = useNavigate();
 
   // Layer filter state
   const [showIndustrial, setShowIndustrial] = useState<boolean>(true);
   const [showResidential, setShowResidential] = useState<boolean>(true);
   const [showClusters, setShowClusters] = useState<boolean>(true);
+  const [showHotspots, setShowHotspots] = useState<boolean>(initialShowHotspots);
+  const [showRiskHeatmap, setShowRiskHeatmap] = useState<boolean>(initialShowHeatmap);
+  const [hotspotsData, setHotspotsData] = useState<Hotspot[]>([]);
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
 
   // Initialize Map
@@ -46,9 +56,14 @@ export const FireMap: React.FC<FireMapProps> = ({
       zoomControl: false,
     });
 
+    const cartoKey = import.meta.env.VITE_CARTO_API_KEY?.trim();
+    const cartoTileUrl = cartoKey
+      ? `https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+      : 'https://basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png';
+
     // Clean, high-contrast CartoDB Positron base tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a>, NASA FIRMS, OpenStreetMap',
+    L.tileLayer(cartoTileUrl, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>, NASA FIRMS',
       subdomains: 'abcd',
       maxZoom: 19
     }).addTo(map);
@@ -72,6 +87,8 @@ export const FireMap: React.FC<FireMapProps> = ({
 
     indLayerRef.current = L.layerGroup().addTo(map);
     resLayerRef.current = L.layerGroup().addTo(map);
+    hotspotLayerRef.current = L.layerGroup().addTo(map);
+    heatmapLayerRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
 
@@ -107,8 +124,10 @@ export const FireMap: React.FC<FireMapProps> = ({
     });
 
     const filteredFires = fires.filter((f) => {
+      if (!f || typeof f.latitude !== 'number' || typeof f.longitude !== 'number' || isNaN(f.latitude) || isNaN(f.longitude)) return false;
       if (severityFilter === 'ALL') return true;
-      return f.prediction?.severity === severityFilter;
+      const sev = (f.prediction?.severity || 'LOW').toUpperCase();
+      return sev === severityFilter.toUpperCase();
     });
 
     const bounds: [number, number][] = [];
@@ -224,6 +243,7 @@ export const FireMap: React.FC<FireMapProps> = ({
     if (!showIndustrial) return;
 
     industrialSites.forEach((site) => {
+      if (!site || typeof site.latitude !== 'number' || typeof site.longitude !== 'number' || isNaN(site.latitude) || isNaN(site.longitude)) return;
       const iconHtml = `
         <div class="w-6 h-6 rounded-md bg-slate-800 text-white flex items-center justify-center shadow-md border border-white hover:scale-110 transition-transform">
           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>
@@ -292,6 +312,112 @@ export const FireMap: React.FC<FireMapProps> = ({
     });
   }, [residentialAreas, showResidential]);
 
+  // Update Persistent Hotspots Layer
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !hotspotLayerRef.current) return;
+
+    hotspotLayerRef.current.clearLayers();
+    if (!showHotspots) return;
+
+    const loadAndRenderHotspots = async () => {
+      let data = hotspotsData;
+      if (!data || data.length === 0) {
+        try {
+          const res = await api.getHotspots(30, 40);
+          data = res.items || [];
+          setHotspotsData(data);
+        } catch (e) {
+          console.warn('Unable to load hotspots layer', e);
+          return;
+        }
+      }
+
+      data.forEach((hs) => {
+        const radius = Math.min(20, Math.max(8, hs.active_days * 1.5));
+        const circle = L.circleMarker([hs.center_latitude, hs.center_longitude], {
+          radius,
+          color: '#f97316',
+          weight: 2,
+          fillColor: '#ea580c',
+          fillOpacity: 0.35,
+          dashArray: '3, 3'
+        });
+
+        const iconHtml = `
+          <div class="px-1.5 py-0.5 rounded-full bg-amber-500 text-white font-bold text-[9px] shadow-sm flex items-center gap-0.5 border border-amber-300">
+            <span>🔥</span>
+            <span>${hs.detection_count}d</span>
+          </div>
+        `;
+        const icon = L.divIcon({
+          html: iconHtml,
+          className: 'hotspot-badge-icon',
+          iconSize: [36, 16],
+          iconAnchor: [18, 8]
+        });
+
+        const marker = L.marker([hs.center_latitude, hs.center_longitude], { icon });
+        const popupContent = `
+          <div class="p-2 text-xs space-y-1">
+            <div class="font-bold text-amber-900 flex items-center gap-1">
+              <span>📍 Persistent Hotspot</span>
+              <span class="text-[10px] bg-amber-100 text-amber-800 px-1 py-0.2 rounded font-mono">Rank #${hs.rank || 1}</span>
+            </div>
+            <div class="text-geo-600">Detections (30d): <strong>${hs.detection_count}</strong> across <strong>${hs.active_days}</strong> active days</div>
+            <div class="text-geo-600">FRP: Avg <strong>${hs.average_frp.toFixed(1)} MW</strong> | Max <strong>${hs.max_frp.toFixed(1)} MW</strong></div>
+            <div class="text-geo-600">Persistence Index: <strong>${(hs.persistence_score * 100).toFixed(0)}%</strong></div>
+            ${hs.nearby_facility ? `<div class="text-slate-700 text-[10px] bg-slate-100 p-1 rounded">Nearby: <strong>${hs.nearby_facility}</strong></div>` : ''}
+          </div>
+        `;
+        circle.bindPopup(popupContent);
+        marker.bindPopup(popupContent);
+
+        hotspotLayerRef.current?.addLayer(circle);
+        hotspotLayerRef.current?.addLayer(marker);
+      });
+    };
+
+    loadAndRenderHotspots();
+  }, [showHotspots, hotspotsData]);
+
+  // Update Dynamic Risk Heatmap Layer
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !heatmapLayerRef.current) return;
+
+    heatmapLayerRef.current.clearLayers();
+    if (!showRiskHeatmap) return;
+
+    const loadAndRenderHeatmap = async () => {
+      try {
+        const res = await api.getRiskHeatmapPoints(7, 25);
+        const points = res.points || [];
+
+        points.forEach((pt) => {
+          let color = '#f59e0b';
+          if (pt.risk_score >= 80) color = '#ef4444';
+          else if (pt.risk_score >= 60) color = '#f97316';
+
+          const circle = L.circle([pt.latitude, pt.longitude], {
+            radius: 12000 + (pt.risk_score * 150),
+            color: 'transparent',
+            weight: 0,
+            fillColor: color,
+            fillOpacity: 0.18
+          });
+
+          circle.bindTooltip(`Risk Score: ${pt.risk_score}/100`, { sticky: true });
+          heatmapLayerRef.current?.addLayer(circle);
+        });
+      } catch (e) {
+        console.warn('Unable to load risk heatmap', e);
+      }
+    };
+
+    loadAndRenderHeatmap();
+  }, [showRiskHeatmap]);
+
   return (
     <div className="relative rounded-2xl overflow-hidden border border-geo-200 shadow-card bg-white">
       {/* Map Control Bar Overlay */}
@@ -326,6 +452,28 @@ export const FireMap: React.FC<FireMapProps> = ({
         <label className="flex items-center gap-1.5 cursor-pointer text-geo-700 hover:text-geo-900 font-medium">
           <input
             type="checkbox"
+            checked={showHotspots}
+            onChange={(e) => setShowHotspots(e.target.checked)}
+            className="rounded border-geo-300 text-amber-600 focus:ring-amber-500"
+          />
+          <Flame className="w-3.5 h-3.5 text-amber-600" />
+          <span>Persistent Hotspots</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 cursor-pointer text-geo-700 hover:text-geo-900 font-medium">
+          <input
+            type="checkbox"
+            checked={showRiskHeatmap}
+            onChange={(e) => setShowRiskHeatmap(e.target.checked)}
+            className="rounded border-geo-300 text-rose-600 focus:ring-rose-500"
+          />
+          <ShieldAlert className="w-3.5 h-3.5 text-rose-600" />
+          <span>Risk Heatmap</span>
+        </label>
+
+        <label className="flex items-center gap-1.5 cursor-pointer text-geo-700 hover:text-geo-900 font-medium">
+          <input
+            type="checkbox"
             checked={showClusters}
             onChange={(e) => setShowClusters(e.target.checked)}
             className="rounded border-geo-300 text-brand-600 focus:ring-brand-500"
@@ -341,10 +489,10 @@ export const FireMap: React.FC<FireMapProps> = ({
             className="bg-geo-50 border border-geo-200 text-geo-800 rounded px-2 py-0.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-brand-500"
           >
             <option value="ALL">All ({fires.length})</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
+            <option value="CRITICAL">Critical ({fires.filter(f => (f.prediction?.severity || 'LOW').toUpperCase() === 'CRITICAL').length})</option>
+            <option value="HIGH">High ({fires.filter(f => (f.prediction?.severity || 'LOW').toUpperCase() === 'HIGH').length})</option>
+            <option value="MEDIUM">Medium ({fires.filter(f => (f.prediction?.severity || 'LOW').toUpperCase() === 'MEDIUM').length})</option>
+            <option value="LOW">Low ({fires.filter(f => (f.prediction?.severity || 'LOW').toUpperCase() === 'LOW').length})</option>
           </select>
         </div>
       </div>
@@ -367,6 +515,14 @@ export const FireMap: React.FC<FireMapProps> = ({
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-severity-low" />
           <span>Natural Fire / Agricultural Burn</span>
+        </div>
+        <div className="flex items-center gap-2 pt-1 border-t border-geo-100">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-500 border border-amber-300" />
+          <span>Persistent Hotspot (30d)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-rose-400 opacity-60" />
+          <span>Risk Heatmap Gradient</span>
         </div>
       </div>
 

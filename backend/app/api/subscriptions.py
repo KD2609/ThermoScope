@@ -9,6 +9,7 @@ from sqlalchemy import desc
 from backend.app.database import get_db
 from backend.app.models.models import NotificationSubscription
 from backend.app.schemas.schemas import SubscriptionCreateRequest, SubscriptionSchema
+from backend.app.services.cache_service import memory_cache
 
 router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
 
@@ -19,8 +20,21 @@ def list_subscriptions(
     db: Session = Depends(get_db)
 ):
     """List geographic awareness notification subscriptions for the user."""
-    subs = db.query(NotificationSubscription).filter(NotificationSubscription.user_email == user_email).order_by(desc(NotificationSubscription.created_at)).all()
-    return [s.to_dict() for s in subs]
+    cache_key = f"subs:{user_email.strip().lower()}"
+    cached = memory_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    subs = (
+        db.query(NotificationSubscription)
+        .filter(NotificationSubscription.user_email == user_email)
+        .order_by(desc(NotificationSubscription.created_at))
+        .limit(100)
+        .all()
+    )
+    result = [s.to_dict() for s in subs]
+    memory_cache.set(cache_key, result, ttl=60.0)
+    return result
 
 
 @router.post("", response_model=SubscriptionSchema)
@@ -42,6 +56,7 @@ def create_subscription(
     db.add(sub)
     db.commit()
     db.refresh(sub)
+    memory_cache.invalidate_prefix("subs:")
     return sub.to_dict()
 
 
@@ -54,4 +69,5 @@ def delete_subscription(id: int, db: Session = Depends(get_db)):
 
     db.delete(sub)
     db.commit()
+    memory_cache.invalidate_prefix("subs:")
     return {"message": f"Subscription {id} successfully deleted."}

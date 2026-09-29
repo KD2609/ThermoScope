@@ -15,23 +15,38 @@ import { api } from '../services/api';
 import { SeverityBadge } from '../components/ui/Badge';
 
 export const AlertsPage: React.FC = () => {
-  const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const [statusTab, setStatusTab] = useState<string>('ALL');
   const [severityFilter, setSeverityFilter] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
+
+  const initialCached = api.getCached<AlertItem[]>(
+    api.getAlertsKey({ status: undefined, severity: undefined })
+  );
+
+  const [alerts, setAlerts] = useState<AlertItem[]>(() => initialCached || []);
+  const [loading, setLoading] = useState<boolean>(() => !initialCached);
   const [resolveModalAlert, setResolveModalAlert] = useState<AlertItem | null>(null);
   const [resolveNotes, setResolveNotes] = useState<string>('Verified on-site conditions. Thermal emission contained.');
   const [actionInProgress, setActionInProgress] = useState<boolean>(false);
 
-  const loadAlerts = async () => {
+  const loadAlerts = async (forceFresh: boolean = false) => {
+    const params = {
+      status: statusTab === 'ALL' ? undefined : statusTab,
+      severity: severityFilter || undefined
+    };
+    const cacheKey = api.getAlertsKey(params);
+    const cached = api.getCached<AlertItem[]>(cacheKey);
+
+    if (cached && !forceFresh) {
+      setAlerts(cached);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
-      const data = await api.getAlerts({
-        status: statusTab === 'ALL' ? undefined : statusTab,
-        severity: severityFilter || undefined
-      });
-      setAlerts(data);
-    } catch (err) {
+      const data = await api.getAlerts(params, undefined, forceFresh);
+      setAlerts(data || []);
+    } catch (err: any) {
       console.error('Failed to load alerts:', err);
     } finally {
       setLoading(false);
@@ -39,7 +54,11 @@ export const AlertsPage: React.FC = () => {
   };
 
   useEffect(() => {
+    let isCurrent = true;
     loadAlerts();
+    return () => {
+      isCurrent = false;
+    };
   }, [statusTab, severityFilter]);
 
   const handleAcknowledge = async (id: string) => {
@@ -47,6 +66,7 @@ export const AlertsPage: React.FC = () => {
       setActionInProgress(true);
       await api.acknowledgeAlert(id, 'Authorized Analyst');
       await loadAlerts();
+      window.dispatchEvent(new CustomEvent('thermoscope:alerts_updated'));
     } catch (err) {
       alert('Failed to acknowledge alert: ' + err);
     } finally {
@@ -61,6 +81,7 @@ export const AlertsPage: React.FC = () => {
       await api.resolveAlert(resolveModalAlert.id, 'Incident Commander', resolveNotes);
       setResolveModalAlert(null);
       await loadAlerts();
+      window.dispatchEvent(new CustomEvent('thermoscope:alerts_updated'));
     } catch (err) {
       alert('Failed to resolve alert: ' + err);
     } finally {
@@ -83,7 +104,7 @@ export const AlertsPage: React.FC = () => {
         </div>
 
         <button
-          onClick={loadAlerts}
+          onClick={() => loadAlerts(true)}
           className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-geo-300 bg-white text-geo-700 hover:bg-geo-50 font-semibold text-xs shadow-subtle transition-colors"
         >
           <RefreshCw className="w-3.5 h-3.5" />
@@ -132,9 +153,32 @@ export const AlertsPage: React.FC = () => {
       {/* Alerts List */}
       <div className="space-y-3">
         {loading ? (
-          <div className="p-12 text-center text-geo-400">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-600" />
-            <span className="text-xs">Loading operational alerts...</span>
+          <div className="space-y-4">
+            <div className="p-8 text-center text-geo-500 bg-white rounded-2xl border border-geo-200 shadow-card">
+              <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-brand-600" />
+              <span className="text-xs font-semibold">Loading active alerts...</span>
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((idx) => (
+                <div
+                  key={idx}
+                  className="animate-pulse bg-white p-5 rounded-2xl border border-geo-200 shadow-card flex flex-col md:flex-row gap-4 items-start justify-between"
+                >
+                  <div className="space-y-2.5 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="h-5 w-20 bg-geo-200 rounded-md"></div>
+                      <div className="h-5 w-16 bg-geo-100 rounded-md"></div>
+                      <div className="h-4 w-32 bg-geo-100 rounded"></div>
+                    </div>
+                    <div className="h-6 w-3/4 bg-geo-200 rounded-md"></div>
+                    <div className="h-4 w-1/2 bg-geo-100 rounded"></div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="h-9 w-28 bg-geo-200 rounded-xl"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         ) : alerts.length === 0 ? (
           <div className="p-12 rounded-2xl border border-geo-200 bg-white text-center text-geo-500 text-sm">
@@ -169,6 +213,16 @@ export const AlertsPage: React.FC = () => {
                       }`}>
                         {alert.status}
                       </span>
+                      {alert.incident_id && (
+                        <span className="px-2 py-0.5 rounded font-mono text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                          Incident: {alert.incident_id} (Deduplicated)
+                        </span>
+                      )}
+                      {alert.escalation_level && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+                          Tier: {alert.escalation_level}
+                        </span>
+                      )}
                     </div>
 
                     <h3 className="text-base font-bold text-geo-900">{alert.title}</h3>
@@ -182,6 +236,7 @@ export const AlertsPage: React.FC = () => {
                       {alert.residential_area_name && (
                         <span>Residential Buffer: <strong className="text-geo-800">{alert.residential_area_name} ({alert.distance_to_residence_km?.toFixed(1)} km)</strong></span>
                       )}
+                      <span>Assigned: <strong className="text-geo-800 font-semibold">{alert.assigned_to || 'Unassigned'}</strong></span>
                       <span>Time: {new Date(alert.created_at || '').toUTCString()}</span>
                     </div>
 

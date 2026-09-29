@@ -32,22 +32,28 @@ class NASAGIBSProvider(BaseSatelliteProvider):
         if not timestamp:
             timestamp = datetime.utcnow()
 
-        date_str = timestamp.strftime("%Y-%m-%d")
+        # NASA GIBS real-world operational archive extends up to the latest satellite passes.
+        # For simulated/future timestamps (e.g. year > 2024), clamp year to a covered archive year
+        # while preserving month and day to reflect true seasonal orbital conditions.
+        if timestamp.year > 2024:
+            clamped_date = timestamp.replace(year=2024)
+        else:
+            clamped_date = timestamp
 
-        # NASA GIBS WMTS URL structure for VIIRS SNPP Corrected Reflectance True Color
-        # Real EPSG:4326 REST Tile URL
-        # For point preview, we generate standard WMS imagery request URL centered on lat, lon
+        date_str = clamped_date.strftime("%Y-%m-%d")
+
+        # In WMS 1.1.1 with SRS=EPSG:4326, standard bounding box order is minlon,minlat,maxlon,maxlat
         delta = 0.08  # ~9km window
         bbox = f"{lon - delta:.4f},{lat - delta:.4f},{lon + delta:.4f},{lat + delta:.4f}"
 
-        # Real public NASA GIBS WMS endpoint
+        # Real public NASA GIBS WMS 1.1.1 endpoint
         wms_url = (
             f"https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?"
-            f"SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&"
-            f"LAYERS=VIIRS_SNPP_CorrectedReflectance_TrueColor,MODIS_Terra_Thermal_Anomalies_All&"
+            f"SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&"
+            f"LAYERS=VIIRS_SNPP_CorrectedReflectance_TrueColor&"
             f"STYLES=&FORMAT=image/jpeg&"
             f"TIME={date_str}&"
-            f"CRS=EPSG:4326&"
+            f"SRS=EPSG:4326&"
             f"BBOX={bbox}&"
             f"WIDTH=512&HEIGHT=512"
         )

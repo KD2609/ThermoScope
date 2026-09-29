@@ -15,11 +15,14 @@ import { NotificationSubscription } from '../types';
 import { api } from '../services/api';
 
 export const SettingsPage: React.FC = () => {
-  const [subscriptions, setSubscriptions] = useState<NotificationSubscription[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [userEmail, setUserEmail] = useState<string>('resident@thermoscope.local');
+  const cacheKey = `subscriptions_${userEmail}`;
+  const initialCached = api.getCached<NotificationSubscription[]>(cacheKey);
+
+  const [subscriptions, setSubscriptions] = useState<NotificationSubscription[]>(() => initialCached || []);
+  const [loading, setLoading] = useState<boolean>(() => !initialCached);
 
   // Form State
-  const [userEmail, setUserEmail] = useState<string>('resident@thermoscope.local');
   const [areaName, setAreaName] = useState<string>('My Residential Sector');
   const [latitude, setLatitude] = useState<number>(22.4900);
   const [longitude, setLongitude] = useState<number>(70.0750);
@@ -29,10 +32,18 @@ export const SettingsPage: React.FC = () => {
   const [smsEnabled, setSmsEnabled] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const loadSubscriptions = async () => {
-    try {
+  const loadSubscriptions = async (forceFresh: boolean = false) => {
+    const cached = api.getCached<NotificationSubscription[]>(`subscriptions_${userEmail}`);
+    if (cached && !forceFresh) {
+      setSubscriptions(cached);
+      setLoading(false);
+      return;
+    }
+    if (!cached && subscriptions.length === 0) {
       setLoading(true);
-      const data = await api.getSubscriptions(userEmail);
+    }
+    try {
+      const data = await api.getSubscriptions(userEmail, forceFresh);
       setSubscriptions(data);
     } catch (err) {
       console.error('Failed to load subscriptions:', err);
