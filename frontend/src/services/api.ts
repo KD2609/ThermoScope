@@ -21,7 +21,34 @@ import {
 } from '../types';
 import { cachedFetch, getCachedData, invalidateCache } from './cache';
 
-export const API_BASE = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:8000/api' : '/api');
+const getApiBase = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
+  if (envUrl && typeof envUrl === 'string' && envUrl.trim() !== '') {
+    return envUrl.trim().replace(/\/+$/, '');
+  }
+
+  // Detect local development in browser
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0' ||
+      window.location.hostname.endsWith('.local'))
+  ) {
+    return 'http://127.0.0.1:8000/api';
+  }
+
+  // If in Vite dev mode without window (SSR or test)
+  if (import.meta.env.DEV) {
+    return 'http://127.0.0.1:8000/api';
+  }
+
+  // Production fallback: points directly to Render backend
+  return 'https://thermoscope-backend-3.onrender.com/api';
+};
+
+export const API_BASE = getApiBase();
+
 
 export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${url}`, {

@@ -48,14 +48,27 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
-    # CORS
+    # Frontend Production & CORS Configuration
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://frontend-psi-azure-17.vercel.app")
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",
         "http://localhost:3000",
+        "http://localhost:4173",
         "http://127.0.0.1:5173",
         "http://127.0.0.1:3000",
-        "*"
+        "http://127.0.0.1:4173",
+        "https://frontend-psi-azure-17.vercel.app",
     ]
+
+    @property
+    def cors_origins(self) -> List[str]:
+        """Returns clean allowed origins with whitespace and trailing slashes stripped to prevent origin mismatch."""
+        origins = list(self.CORS_ORIGINS)
+        if self.FRONTEND_URL:
+            clean_url = self.FRONTEND_URL.strip().rstrip("/")
+            if clean_url and clean_url not in origins:
+                origins.append(clean_url)
+        return origins
 
     # Proximity & Danger Zone Thresholds (in kilometers)
     DANGER_ZONE_CRITICAL_KM: float = 1.0
